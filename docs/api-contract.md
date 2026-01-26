@@ -9,6 +9,7 @@ Success:
 ```json
 { "success": true, "data": {} }
 ```
+
 ```json
 Error:
 { "success": false, "error": { "code": "STRING", "message": "STRING", "details": { } } }
