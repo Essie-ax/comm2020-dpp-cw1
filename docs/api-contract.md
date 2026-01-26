@@ -9,9 +9,10 @@ Success:
 ```json
 { "success": true, "data": {} }
 ```
+```json
 Error:
 { "success": false, "error": { "code": "STRING", "message": "STRING", "details": { } } }
-
+```
 ## Auth
 POST /api/auth/login
 Request:
