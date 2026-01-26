@@ -59,8 +59,8 @@ Response:
 ```
 
 ## Products GET /api/products?category={category}
-Response:
 ```json
+Response:
 {
   "success": true,
   "data": {
@@ -79,12 +79,13 @@ Response:
 ```
 
 ## Passports (Player) POST /api/passports Create draft passport from template.
-```json
 Request:
+```json
 { "productId": 1, "templateId": 1 }
 ```
-```json
+
 Response:
+```json
 { "success": true, "data": { "passportId": 10, "status": "DRAFT" } }
 ```
 
@@ -106,8 +107,9 @@ Response:
 { "success": true, "data": { "passportId": 10, "status": "DRAFT" } }
 ```
 
-GET /api/passports/{passportId}
+## GET /api/passports/{passportId}
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -120,10 +122,11 @@ Response:
     "confidenceScore": 0.6
   }
 }
+```
 
-Evidence
-POST /api/passports/{passportId}/evidence
+## Evidence POST /api/passports/{passportId}/evidence
 Request:
+```json
 {
   "type": "CERTIFICATE",
   "issuer": "ISO Body",
@@ -132,16 +135,20 @@ Request:
   "fileReference": "uploads/cert1.pdf",
   "fieldKey": "chemistry"
 }
+```
 Response:
+```json
 { "success": true, "data": { "evidenceId": 100 } }
+```
 
-GET /api/passports/{passportId}/evidence
+## GET /api/passports/{passportId}/evidence
 Response:
+```json
 {
   "success": true,
   "data": {
     "evidence": [
-      {
+        {
         "evidenceId": 100,
         "type": "CERTIFICATE",
         "issuer": "ISO Body",
@@ -153,10 +160,10 @@ Response:
     ]
   }
 }
-
-Validation + Scoring
-POST /api/passports/{passportId}/validate
+```
+## Validation + Scoring POST /api/passports/{passportId}/validate
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -181,10 +188,11 @@ Response:
     "confidenceScore": 0.6
   }
 }
+```
 
-Challenges (GameKeeper)
-POST /api/challenges (GameKeeper action)
+## Challenges (GameKeeper) POST /api/challenges (GameKeeper action)
 Request:
+```json
 {
   "title": "Battery Compliance Sprint",
   "category": "Battery",
@@ -193,11 +201,15 @@ Request:
   "startDate": "2026-02-01",
   "endDate": "2026-03-01"
 }
+```
 Response:
+```json
 { "success": true, "data": { "challengeId": 200 } }
+```
 
-GET /api/challenges?category={category}
+## GET /api/challenges?category={category}
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -212,12 +224,14 @@ Response:
     ]
   }
 }
-
-Submission + Leaderboard
-POST /api/challenges/{challengeId}/submit
+```
+## Submission + Leaderboard POST /api/challenges/{challengeId}/submit
 Request:
+```json
 { "passportId": 10 }
+```
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -230,9 +244,10 @@ Response:
     ]
   }
 }
-
-GET /api/leaderboard?challengeId={challengeId}
+```
+## GET /api/leaderboard?challengeId={challengeId}
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -247,7 +262,7 @@ Response:
     ]
   }
 }
-
+```
 
 
 
