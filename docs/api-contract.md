@@ -24,9 +24,9 @@ Response:
 { "success": true, "data": { "token": "demo-token", "role": "PLAYER", "userId": 1 } }
 ```
 
-Templates (GameKeeper)
-GET /api/templates?category={category}
+## Templates (GameKeeper) GET /api/templates?category={category}
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -41,17 +41,22 @@ Response:
     ]
   }
 }
+```
 
-POST /api/templates (GameKeeper action)
+## POST /api/templates (GameKeeper action)
 Request:
+```json
 {
   "category": "Battery",
   "requiredFields": ["name", "brand", "origin", "chemistry"],
   "optionalFields": ["recyclability", "warrantyMonths"],
   "ruleSetId": 1
 }
+```
 Response:
+```json
 { "success": true, "data": { "templateId": 2 } }
+```
 
 Products
 GET /api/products?category={category}
