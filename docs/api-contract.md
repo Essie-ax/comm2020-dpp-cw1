@@ -59,8 +59,8 @@ Response:
 ```
 
 ## Products GET /api/products?category={category}
-```json
 Response:
+```json
 {
   "success": true,
   "data": {
