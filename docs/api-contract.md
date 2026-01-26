@@ -58,9 +58,9 @@ Response:
 { "success": true, "data": { "templateId": 2 } }
 ```
 
-Products
-GET /api/products?category={category}
+## Products GET /api/products?category={category}
 Response:
+```json
 {
   "success": true,
   "data": {
@@ -76,18 +76,21 @@ Response:
     ]
   }
 }
+```
 
-Passports (Player)
-POST /api/passports
-Create draft passport from template.
+## Passports (Player) POST /api/passports Create draft passport from template.
+```json
 Request:
 { "productId": 1, "templateId": 1 }
+```
+```json
 Response:
 { "success": true, "data": { "passportId": 10, "status": "DRAFT" } }
+```
 
-PUT /api/passports/{passportId}
-Update passport fields (JSON object).
+## PUT /api/passports/{passportId} Update passport fields (JSON object).
 Request:
+```json
 {
   "fields": {
     "name": "EcoCell A1",
@@ -97,8 +100,11 @@ Request:
     "recyclability": "High"
   }
 }
+```
 Response:
+```json
 { "success": true, "data": { "passportId": 10, "status": "DRAFT" } }
+```
 
 GET /api/passports/{passportId}
 Response:
