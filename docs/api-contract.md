@@ -8,7 +8,7 @@ Content-Type: `application/json`
 Success:
 ```json
 { "success": true, "data": {} }
-{ "success": false, "error": { "code": "STRING", "message": "STRING", "details": {} } }
+
 
 Auth
 POST /api/auth/login
