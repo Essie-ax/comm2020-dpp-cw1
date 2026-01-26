@@ -8,6 +8,7 @@ Content-Type: `application/json`
 Success:
 ```json
 { "success": true, "data": {} }
+
 Error:
 ```json
 { "success": false, "error": { "code": "STRING", "message": "STRING", "details": { } } }
