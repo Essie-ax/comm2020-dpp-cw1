@@ -10,8 +10,8 @@ Success:
 { "success": true, "data": {} }
 ```
 
-```json
 Error:
+```json
 { "success": false, "error": { "code": "STRING", "message": "STRING", "details": { } } }
 ```
 ## Auth
