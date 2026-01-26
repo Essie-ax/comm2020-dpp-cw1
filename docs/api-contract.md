@@ -8,13 +8,17 @@ Content-Type: `application/json`
 Success:
 ```json
 { "success": true, "data": {} }
+Error:
+```json
+{ "success": false, "error": { "code": "STRING", "message": "STRING", "details": { } } }
 
-
-Auth
+## Auth
 POST /api/auth/login
 Request:
+```json
 { "username": "player1", "password": "password" }
 Response:
+```json
 { "success": true, "data": { "token": "demo-token", "role": "PLAYER", "userId": 1 } }
 
 Templates (GameKeeper)
