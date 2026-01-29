@@ -1,3 +1,23 @@
+## Conventions (MUST FOLLOW)
+API uses camelCase; DB uses snake_case. Evidence date field in API is evidenceDate.
+### Naming
+- API JSON uses **camelCase** (e.g., evidenceDate, fieldKey).
+- Database uses **snake_case** (e.g., evidence_date, field_key).
+
+### Enums (exact values)
+- role: `PLAYER | GAMEKEEPER`
+- passport.status: `DRAFT | SUBMITTED | PUBLISHED`
+- evidence.type: `CERTIFICATE | REPORT | PHOTO` (CW1)
+
+### Score scale
+- completenessScore and confidenceScore are **0.00–1.00** (DECIMAL), UI may display as percentage.
+- Challenge constraints minCompleteness uses the same 0.00–1.00 scale.
+
+### Date/Time format
+- Date: `YYYY-MM-DD`
+- Timestamp: ISO-8601 `YYYY-MM-DDTHH:mm:ssZ`
+
+
 # API Contract v0.1 (CW1)
 
 Base URL: `/api`  
@@ -130,7 +150,7 @@ Request:
 {
   "type": "CERTIFICATE",
   "issuer": "ISO Body",
-  "date": "2026-02-01",
+  "evidence_date": "2026-02-01",
   "summary": "ISO certificate for chemistry",
   "fileReference": "uploads/cert1.pdf",
   "fieldKey": "chemistry"
@@ -152,7 +172,7 @@ Response:
         "evidenceId": 100,
         "type": "CERTIFICATE",
         "issuer": "ISO Body",
-        "date": "2026-02-01",
+        "evidence_date": "2026-02-01",
         "summary": "ISO certificate for chemistry",
         "fileReference": "uploads/cert1.pdf",
         "fieldKey": "chemistry"
