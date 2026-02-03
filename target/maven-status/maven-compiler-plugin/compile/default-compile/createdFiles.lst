@@ -1,0 +1,4 @@
+uk\ac\comm2020\model\Role.class
+uk\ac\comm2020\model\User.class
+uk\ac\comm2020\service\AuthService.class
+uk\ac\comm2020\App.class
