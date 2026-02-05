@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Passport Consumer</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0 0 8px;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid rgba(99, 102, 241, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 12px 32px rgba(148, 163, 184, 0.2);
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin: 10px 0 6px;
+      }
+      input, button {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        background: #ffffff;
+        color: #1f2937;
+      }
+      button {
+        background: #7da4ff;
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .message {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #ffe4e7;
+        color: #9f1239;
+        display: none;
+      }
+      .section-title {
+        margin: 6px 0 10px;
+        font-weight: 700;
+        color: #475569;
+      }
+      .field-list {
+        display: grid;
+        gap: 6px;
+      }
+      .field-item {
+        padding: 8px;
+        border-radius: 6px;
+        background: #f1f5f9;
+      }
+      .summary-grid {
+        display: grid;
+        gap: 8px;
+      }
+      .summary-item strong {
+        display: inline-block;
+        min-width: 140px;
+      }
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 1.2rem;
+        }
+        .summary-item strong {
+          min-width: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Passport Consumer View</h1>
+
+      <section class="card">
+        <div class="row">
+          <div>
+            <label for="passportIdInput">Passport ID</label>
+            <input id="passportIdInput" type="number" min="1" placeholder="e.g. 1">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>&nbsp;</label>
+            // click to load passport by id
+            <button id="loadBtn">Load Passport</button>
+          </div>
+        </div>
+        // show error message here
+        <div class="message" id="loadMessage"></div>
+      </section>
+
+      <section class="card" id="summaryCard" style="display:none;">
+        <div class="section-title">Summary</div>
+        // summary key-value list
+        <div class="summary-grid" id="summaryGrid"></div>
+      </section>
+
+      <section class="card" id="detailsCard" style="display:none;">
+        <div class="section-title">Required Fields</div>
+        <div class="field-list" id="requiredList"></div>
+        <div class="section-title" style="margin-top:14px;">Optional Fields</div>
+        <div class="field-list" id="optionalList"></div>
+        <div class="section-title" style="margin-top:14px;">Other Fields</div>
+        <div class="field-list" id="otherList"></div>
+      </section>
+    </div>
+
+    <script>
+      // cache dom nodes
+      const passportIdInput = document.getElementById("passportIdInput");
+      const loadBtn = document.getElementById("loadBtn");
+      const loadMessage = document.getElementById("loadMessage");
+      const summaryCard = document.getElementById("summaryCard");
+      const detailsCard = document.getElementById("detailsCard");
+      const summaryGrid = document.getElementById("summaryGrid");
+      const requiredList = document.getElementById("requiredList");
+      const optionalList = document.getElementById("optionalList");
+      const otherList = document.getElementById("otherList");
+
+      // support url like ?id=123
+      const params = new URLSearchParams(window.location.search);
+      const initialId = params.get("id");
+
+      // if url has id, fill it
+      if (initialId) {
+        passportIdInput.value = initialId;
+      }
+
+      // auto load when id exists
+      if (initialId) {
+        loadPassport();
+      }
+
+      loadBtn.addEventListener("click", loadPassport);
+
+      // load passport + template, then show ui
+      function loadPassport() {
+        const passportId = passportIdInput.value.trim();
+        if (!passportId) {
+          showMessage("Please enter a passport id.");
+          return;
+        }
+
+        // clear old message
+        showMessage("");
+
+        fetch(`/api/passports/${passportId}`)
+          .then((res) => res.json())
+          .then(async (json) => {
+            if (!json.success) {
+              throw new Error(json.error?.message || "Failed to load passport");
+            }
+
+            const passport = json.data;
+
+            // template is for required/optional groups
+            const template = await fetchTemplateById(passport.templateId);
+
+            renderSummary(passport);
+            renderDetails(passport.fields || {}, template);
+          })
+          .catch((err) => {
+            showMessage(err.message);
+            summaryCard.style.display = "none";
+            detailsCard.style.display = "none";
+          });
+      }
+
+      // load template by id, fail then return null
+      async function fetchTemplateById(templateId) {
+        try {
+          const res = await fetch(`/api/templates/${templateId}`);
+          const json = await res.json();
+          if (!json.success) {
+            return null;
+          }
+          return json.data;
+        } catch {
+          return null;
+        }
+      }
+
+      // show summary info on top
+      function renderSummary(passport) {
+        summaryGrid.innerHTML = "";
+
+        // basic info
+        const summaryItems = [
+          ["Passport ID", passport.passportId],
+          ["Product ID", passport.productId],
+          ["Template ID", passport.templateId],
+          ["Status", passport.status],
+          ["Completeness", passport.completenessScore],
+          ["Confidence", passport.confidenceScore]
+        ];
+
+        // show some common fields if they exist
+        const keyFields = ["name", "brand", "origin", "chemistry"];
+        keyFields.forEach((key) => {
+          if (passport.fields && passport.fields[key] !== undefined) {
+            summaryItems.push([key, passport.fields[key]]);
+          }
+        });
+
+        // render items
+        summaryItems.forEach(([label, value]) => {
+          const item = document.createElement("div");
+          item.className = "summary-item";
+          item.innerHTML = `<strong>${label}:</strong> ${formatValue(value)}`;
+          summaryGrid.appendChild(item);
+        });
+
+        summaryCard.style.display = "block";
+      }
+
+      // split fields into required / optional / other
+      function renderDetails(fields, template) {
+        requiredList.innerHTML = "";
+        optionalList.innerHTML = "";
+        otherList.innerHTML = "";
+
+        const requiredFields = template?.requiredFields || [];
+        const optionalFields = template?.optionalFields || [];
+        const usedKeys = new Set();
+
+        requiredFields.forEach((key) => {
+          usedKeys.add(key);
+          requiredList.appendChild(makeFieldItem(key, fields[key]));
+        });
+
+        optionalFields.forEach((key) => {
+          usedKeys.add(key);
+          optionalList.appendChild(makeFieldItem(key, fields[key]));
+        });
+
+        // any key not in template -> put to other
+        Object.keys(fields || {}).forEach((key) => {
+          if (!usedKeys.has(key)) {
+            otherList.appendChild(makeFieldItem(key, fields[key]));
+          }
+        });
+
+        // if empty, show (none)
+        if (!requiredList.children.length) {
+          requiredList.appendChild(makeFieldItem("(none)", ""));
+        }
+        if (!optionalList.children.length) {
+          optionalList.appendChild(makeFieldItem("(none)", ""));
+        }
+        if (!otherList.children.length) {
+          otherList.appendChild(makeFieldItem("(none)", ""));
+        }
+
+        detailsCard.style.display = "block";
+      }
+
+      // make one "key: value" row
+      function makeFieldItem(key, value) {
+        const item = document.createElement("div");
+        item.className = "field-item";
+
+        const displayValue = value === undefined ? "—" : formatValue(value);
+        item.textContent = `${key}: ${displayValue}`;
+
+        return item;
+      }
+
+      // simple value to string
+      function formatValue(value) {
+        if (value === null || value === undefined) {
+          return "";
+        }
+        if (typeof value === "object") {
+          return JSON.stringify(value);
+        }
+        return String(value);
+      }
+
+      // show error message box
+      function showMessage(message) {
+        if (!message) {
+          loadMessage.style.display = "none";
+          return;
+        }
+        loadMessage.textContent = message;
+        loadMessage.style.display = "block";
+      }
+    </script>
+  </body>
+</html>
