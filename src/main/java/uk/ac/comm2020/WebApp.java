@@ -3,140 +3,105 @@ package uk.ac.comm2020;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import uk.ac.comm2020.model.Role;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import java.net.InetSocketAddress;
+
 import java.nio.charset.StandardCharsets;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import uk.ac.comm2020.controller.AuthController;
+import uk.ac.comm2020.controller.TemplateController;
+import uk.ac.comm2020.dao.InMemoryTemplateDao;
+import uk.ac.comm2020.model.Role;
+import uk.ac.comm2020.service.SessionService;
+import uk.ac.comm2020.service.TemplateService;
 
 
 public class WebApp {
-
     private static final Map<String, Session> sessions = new HashMap<>();
 
-    private static class Session {
+private static class Session {
     final long userId;
     final Role role;
     final String username;
 
     Session(long userId, Role role, String username) {
-    this.userId = userId;
-    this.role = role;
-    this.username = username;
-  }
+        this.userId = userId;
+        this.role = role;
+        this.username = username;
+    }
 }
 
-  public static void main(String[] args) throws Exception {
-    int port = 8080;
-    HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-    
-    server.createContext("/", WebApp::handleStatic);
-    server.createContext("/api/auth/login", WebApp::handleLogin);    
-    server.createContext("/api/templates", WebApp::handleTemplates);
+    public static void main(String[] args) throws Exception {
+        int port = 8080;
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
+        // Initialize services and controllers
+        SessionService sessionService = new SessionService();
+        InMemoryTemplateDao templateDao = new InMemoryTemplateDao();
+        TemplateService templateService = new TemplateService(templateDao, sessionService);
 
+        AuthController authController = new AuthController(sessionService);
+        TemplateController templateController = new TemplateController(templateService);
 
-    server.setExecutor(null);
-    server.start();
-    System.out.println("Server running: http://localhost:" + port + "/login.html");
-  }
+        // Register contexts
+        server.createContext("/", WebApp::handleStatic);
+        server.createContext("/api/auth/login", authController::handleLogin);
+        server.createContext("/api/templates", templateController::handleTemplates);
 
-  
-  private static void handleStatic(HttpExchange ex) throws IOException {
-    if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
-      sendText(ex, 405, "Method Not Allowed");
-      return;
+        server.setExecutor(null);
+        server.start();
+        System.out.println("Server running: http://localhost:" + port + "/login.html");
     }
 
-    String path = ex.getRequestURI().getPath();
-    if (path.equals("/") || path.isEmpty()) path = "/login.html";
+    private static void handleStatic(HttpExchange ex) throws IOException {
+        if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
+            sendText(ex, 405, "Method Not Allowed");
+            return;
+        }
 
-    
-    if (path.contains("..")) {
-      sendText(ex, 400, "Bad Request");
-      return;
+        String path = ex.getRequestURI().getPath();
+        if (path.equals("/") || path.isEmpty()) path = "/login.html";
+
+        
+        if (path.contains("..")) {
+            sendText(ex, 400, "Bad Request");
+            return;
+        }
+
+        String resourcePath = "static" + path; 
+        InputStream in = WebApp.class.getClassLoader().getResourceAsStream(resourcePath);
+
+        if (in == null) {
+            sendText(ex, 404, "Not Found: " + path);
+            return;
+        }
+
+        byte[] bytes = in.readAllBytes();
+        Headers h = ex.getResponseHeaders();
+        h.set("Content-Type", guessContentType(path));
+        ex.sendResponseHeaders(200, bytes.length);
+        try (OutputStream os = ex.getResponseBody()) {
+            os.write(bytes);
+        }
     }
 
-    String resourcePath = "static" + path; 
-    InputStream in = WebApp.class.getClassLoader().getResourceAsStream(resourcePath);
-
-    if (in == null) {
-      sendText(ex, 404, "Not Found: " + path);
-      return;
-    }
-
-    byte[] bytes = in.readAllBytes();
-    Headers h = ex.getResponseHeaders();
-    h.set("Content-Type", guessContentType(path));
-    ex.sendResponseHeaders(200, bytes.length);
-    try (OutputStream os = ex.getResponseBody()) {
-      os.write(bytes);
-    }
-  }
-
-  private static String guessContentType(String path) {
-    if (path.endsWith(".html")) return "text/html; charset=utf-8";
-    if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
-    if (path.endsWith(".css")) return "text/css; charset=utf-8";
-    return "application/octet-stream";
-  }
-
-  
-  private static void handleLogin(HttpExchange ex) throws IOException {
-    if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) {
-      sendJson(ex, 405, jsonError("METHOD_NOT_ALLOWED", "Only POST is allowed"));
-      return;
-    }
-
-    String body = new String(ex.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-
-    Map<String, String> req = parseVerySimpleJson(body);
-    String username = req.getOrDefault("username", "").trim();
-    String password = req.getOrDefault("password", "");
-
-    
-    if (username.isEmpty() || password.isEmpty()) {
-      sendJson(ex, 400, jsonError("BAD_REQUEST", "username/password required"));
-      return;
+    private static String guessContentType(String path) {
+        if (path.endsWith(".html")) return "text/html; charset=utf-8";
+        if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
+        if (path.endsWith(".css")) return "text/css; charset=utf-8";
+        return "application/octet-stream";
     }
 
     
-    Role role;
-    long userId;
-
-    if ("player1".equals(username) && "password".equals(password)) {
-      role = Role.PLAYER;
-      userId = 1;
-    } else if ("gamekeeper1".equals(username) && "password".equals(password)) {
-      role = Role.GAME_KEEPER;
-      userId = 2;
-    } else {
-      sendJson(ex, 401, jsonError("UNAUTHORIZED", "Invalid credentials"));
-      return;
-    }
-
-    String token = UUID.randomUUID().toString();
-    sessions.put(token, new Session(userId, role, username));
-
-
-    String resp = "{"
-        + "\"success\":true,"
-        + "\"data\":{"
-        + "\"token\":\"" + token + "\","
-        + "\"role\":\"" + role.name() + "\","
-        + "\"userId\":" + userId
-        + "}"
-        + "}";
-
-    sendJson(ex, 200, resp);
-  }
-
-  
   private static void sendText(HttpExchange ex, int status, String text) throws IOException {
     byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
     ex.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
