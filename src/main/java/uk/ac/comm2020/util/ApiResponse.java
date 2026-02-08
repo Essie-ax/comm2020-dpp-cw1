@@ -60,4 +60,12 @@ public class ApiResponse {
     public int getStatus() {
         return success ? 200 : ("UNAUTHORIZED".equals(error.get("code")) ? 401 : 403);
     }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public Map<String, Object> getData() {
+        return data;
+    }
 }

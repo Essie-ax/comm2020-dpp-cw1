@@ -12,51 +12,36 @@ import java.net.InetSocketAddress;
 
 import java.nio.charset.StandardCharsets;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 import uk.ac.comm2020.controller.AuthController;
 import uk.ac.comm2020.controller.TemplateController;
 import uk.ac.comm2020.dao.InMemoryTemplateDao;
-import uk.ac.comm2020.dao.TemplateDao;
+import uk.ac.comm2020.dao.InMemoryUserDao;
 import uk.ac.comm2020.dao.MySqlTemplateDao;
-import uk.ac.comm2020.util.Db;
-import uk.ac.comm2020.model.Role;
+import uk.ac.comm2020.dao.MySqlUserDao;
+import uk.ac.comm2020.dao.TemplateDao;
+import uk.ac.comm2020.dao.UserDao;
 import uk.ac.comm2020.service.SessionService;
 import uk.ac.comm2020.service.TemplateService;
+import uk.ac.comm2020.util.Db;
 
 
 public class WebApp {
-    private static final Map<String, Session> sessions = new HashMap<>();
-
-private static class Session {
-    final long userId;
-    final Role role;
-    final String username;
-
-    Session(long userId, Role role, String username) {
-        this.userId = userId;
-        this.role = role;
-        this.username = username;
-    }
-}
-
 
     public static void main(String[] args) throws Exception {
         int port = 8080;
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-        // Initialize services and controllers
-        SessionService sessionService = new SessionService();
-        TemplateDao templateDao;
-        if (Db.hasUrl()) {
-          templateDao = new MySqlTemplateDao();
-          System.out.println("Using MySQL Template DAO (DB_URL provided)");
+        boolean useDb = Db.hasUrl();
+        UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
+        TemplateDao templateDao = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
+        if (useDb) {
+            System.out.println("Using MySQL (UserDao + Template DAO, DB_URL provided)");
         } else {
-          templateDao = new InMemoryTemplateDao();
-          System.out.println("Using In-memory Template DAO (no DB_URL)");
+            System.out.println("Using In-memory (UserDao + Template DAO, no DB_URL)");
         }
+
+        SessionService sessionService = new SessionService(userDao);
         TemplateService templateService = new TemplateService(templateDao, sessionService);
 
         AuthController authController = new AuthController(sessionService);
@@ -121,113 +106,4 @@ private static class Session {
     }
   }
 
-  private static void sendJson(HttpExchange ex, int status, String json) throws IOException {
-    byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-    ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
-    ex.sendResponseHeaders(status, bytes.length);
-    try (OutputStream os = ex.getResponseBody()) {
-      os.write(bytes);
-    }
-  }
-
-  private static String jsonError(String code, String message) {
-    return "{"
-        + "\"success\":false,"
-        + "\"error\":{"
-        + "\"code\":\"" + escape(code) + "\","
-        + "\"message\":\"" + escape(message) + "\","
-        + "\"details\":{}"
-        + "}"
-        + "}";
-  }
-
-  
-  private static Map<String, String> parseVerySimpleJson(String body) {
-    Map<String, String> m = new HashMap<>();
-    if (body == null) return m;
-    String s = body.trim();
-    if (!s.startsWith("{") || !s.endsWith("}")) return m;
-    s = s.substring(1, s.length() - 1).trim();
-    if (s.isEmpty()) return m;
-
-    
-    String[] parts = s.split(",");
-    for (String p : parts) {
-      String[] kv = p.split(":", 2);
-      if (kv.length != 2) continue;
-      String k = stripQuotes(kv[0].trim());
-      String v = stripQuotes(kv[1].trim());
-      m.put(k, v);
-    }
-    return m;
-  }
-
-  private static String stripQuotes(String s) {
-    if (s.startsWith("\"") && s.endsWith("\"") && s.length() >= 2) {
-      return s.substring(1, s.length() - 1);
-    }
-    return s;
-  }
-
-  private static String escape(String s) {
-    return s.replace("\\", "\\\\").replace("\"", "\\\"");
-  }
-private static void handleTemplates(HttpExchange ex) throws IOException {
-  if (!"GET".equalsIgnoreCase(ex.getRequestMethod())) {
-    sendJson(ex, 405, jsonError("METHOD_NOT_ALLOWED", "Only GET is allowed"));
-    return;
-  }
-
-  String auth = ex.getRequestHeaders().getFirst("Authorization");
-  String token = extractBearerToken(auth);
-
-  Session s = (token == null) ? null : sessions.get(token);
-  if (s == null) {
-    sendJson(ex, 401, jsonError("UNAUTHORIZED", "Missing or invalid token"));
-    return;
-  }
-
-  // 只有 GameKeeper 能访问
-  if (s.role != Role.GAME_KEEPER) {
-    sendJson(ex, 403, jsonError("FORBIDDEN", "GameKeeper role required"));
-    return;
-  }
-
-  String category = getQueryParam(ex.getRequestURI().getRawQuery(), "category");
-  if (category == null || category.isBlank()) category = "Battery";
-
-  String resp = "{"
-      + "\"success\":true,"
-      + "\"data\":{"
-      + "\"templates\":[{"
-      + "\"templateId\":1,"
-      + "\"category\":\"" + escape(category) + "\","
-      + "\"requiredFields\":[\"name\",\"brand\",\"origin\",\"chemistry\"],"
-      + "\"optionalFields\":[\"recyclability\",\"warrantyMonths\"],"
-      + "\"ruleSetId\":1"
-      + "}]"
-      + "}"
-      + "}";
-
-  sendJson(ex, 200, resp);
-}
-
-private static String extractBearerToken(String authHeader) {
-  if (authHeader == null) return null;
-  String p = "Bearer ";
-  if (!authHeader.startsWith(p)) return null;
-  return authHeader.substring(p.length()).trim();
-}
-
-private static String getQueryParam(String query, String key) {
-  if (query == null || query.isBlank()) return null;
-  String[] parts = query.split("&");
-  for (String part : parts) {
-    String[] kv = part.split("=", 2);
-    if (kv.length == 2 && kv[0].equals(key)) {
-      return java.net.URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
-    }
-  }
-  return null;
-}
 }
