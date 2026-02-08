@@ -19,6 +19,9 @@ import java.util.UUID;
 import uk.ac.comm2020.controller.AuthController;
 import uk.ac.comm2020.controller.TemplateController;
 import uk.ac.comm2020.dao.InMemoryTemplateDao;
+import uk.ac.comm2020.dao.TemplateDao;
+import uk.ac.comm2020.dao.MySqlTemplateDao;
+import uk.ac.comm2020.util.Db;
 import uk.ac.comm2020.model.Role;
 import uk.ac.comm2020.service.SessionService;
 import uk.ac.comm2020.service.TemplateService;
@@ -46,7 +49,14 @@ private static class Session {
 
         // Initialize services and controllers
         SessionService sessionService = new SessionService();
-        InMemoryTemplateDao templateDao = new InMemoryTemplateDao();
+        TemplateDao templateDao;
+        if (Db.hasUrl()) {
+          templateDao = new MySqlTemplateDao();
+          System.out.println("Using MySQL Template DAO (DB_URL provided)");
+        } else {
+          templateDao = new InMemoryTemplateDao();
+          System.out.println("Using In-memory Template DAO (no DB_URL)");
+        }
         TemplateService templateService = new TemplateService(templateDao, sessionService);
 
         AuthController authController = new AuthController(sessionService);
