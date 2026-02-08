@@ -11,3 +11,6 @@ UPDATE users SET password_hash = '5e884898da2847151d0e56f8dc6292773603d0d6aabbdd
 WHERE user_id IN (1, 2);
 
 -- 执行完后：player1 / gamekeeper1 用密码 password 都能登录。
+UPDATE users
+SET password_hash = SHA2('password', 256)
+WHERE username IN ('player1','gamekeeper1');
