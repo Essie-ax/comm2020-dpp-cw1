@@ -56,6 +56,15 @@ public final class Db {
         return url != null && !url.isBlank();
     }
 
+    /** Try to open and close a connection. Returns true if DB is reachable, false otherwise. */
+    public static boolean tryConnection() {
+        try (Connection c = getConnection()) {
+            return c != null;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
     public static Connection getConnection() throws SQLException {
         String url = getEnv("DB_URL");
         if (url == null || url.isBlank()) return null;

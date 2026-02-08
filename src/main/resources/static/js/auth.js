@@ -36,7 +36,7 @@ async function login() {
     localStorage.setItem("userId", String(userId));
 
     
-    if (role === "GAMEKEEPER") window.location.href = "/gamekeeper.html";
+    if (role === "GAME_KEEPER" || role === "GAMEKEEPER") window.location.href = "/gamekeeper.html";
     else window.location.href = "/player.html";
 
   } catch (e) {

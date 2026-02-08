@@ -32,13 +32,17 @@ public class WebApp {
         int port = 8080;
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-        boolean useDb = Db.hasUrl();
+        boolean useDb = Db.hasUrl() && Db.tryConnection();
         UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
         TemplateDao templateDao = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
         if (useDb) {
-            System.out.println("Using MySQL (UserDao + Template DAO, DB_URL provided)");
+            System.out.println("Using MySQL (UserDao + Template DAO, DB connected)");
         } else {
-            System.out.println("Using In-memory (UserDao + Template DAO, no DB_URL)");
+            if (Db.hasUrl()) {
+                System.out.println("DB_URL set but connection failed -> Using In-memory (UserDao + Template DAO). Start MySQL or remove .env to avoid this message.");
+            } else {
+                System.out.println("Using In-memory (UserDao + Template DAO, no DB_URL)");
+            }
         }
 
         SessionService sessionService = new SessionService(userDao);
