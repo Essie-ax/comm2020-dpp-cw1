@@ -3,6 +3,8 @@ package uk.ac.comm2020.service;
 import uk.ac.comm2020.dao.PassportDao;
 import uk.ac.comm2020.model.Evidence;
 import uk.ac.comm2020.model.Passport;
+import java.util.Optional;
+
 
 import java.sql.SQLException;
 import java.util.List;
@@ -24,6 +26,15 @@ public class PassportValidationService {
         this.scoringService = scoringService;
     }
 
+    public ValidationResult validatePassport(long passportId) throws SQLException {
+    Optional<Passport> opt = passportDao.findById(passportId);
+    if (opt.isEmpty()) {
+        throw new IllegalArgumentException("Passport not found: " + passportId);
+    }
+    return validatePassport(opt.get());
+}
+
+
     public ValidationResult validatePassport(Passport passport) throws SQLException {
 
         // 1. run validation rules
@@ -34,8 +45,8 @@ public class PassportValidationService {
                 evidenceService.getEvidenceForPassport(passport.getPassportId());
 
         // 3. calculate scores
-        double completeness =
-                scoringService.calculateCompleteness(passport);
+        double completeness = scoringService.calculateCompleteness(passport, List.of("fieldA", "fieldB"));
+
 
         double confidence =
                 scoringService.calculateConfidence(evidenceList.size());

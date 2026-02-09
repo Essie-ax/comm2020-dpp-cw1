@@ -20,6 +20,15 @@ import uk.ac.comm2020.service.ProductService;
 import uk.ac.comm2020.service.SessionService;
 import uk.ac.comm2020.service.TemplateService;
 
+import uk.ac.comm2020.controller.PassportValidationController;
+import uk.ac.comm2020.dao.EvidenceDao;
+import uk.ac.comm2020.dao.PassportDao;
+import uk.ac.comm2020.service.EvidenceService;
+import uk.ac.comm2020.service.PassportValidationService;
+import uk.ac.comm2020.service.ScoringService;
+import uk.ac.comm2020.service.ValidationService;
+
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -48,6 +57,22 @@ public class WebApp {
                 productDao
         );
 
+// ---- Module C: validation / scoring / evidence ----
+PassportDao passportDaoForValidation = new PassportDao(database);
+
+EvidenceDao evidenceDao = new EvidenceDao(database);
+EvidenceService evidenceService = new EvidenceService(evidenceDao);
+
+ValidationService validationService = new ValidationService();
+ScoringService scoringService = new ScoringService();
+
+PassportValidationService passportValidationService =
+        new PassportValidationService(passportDaoForValidation, evidenceService, validationService, scoringService);
+
+PassportValidationController passportValidationController =
+        new PassportValidationController(passportValidationService);
+
+
         AuthController authController = new AuthController(sessionService);
 
         TemplateService templateServiceWithSession = new TemplateService(templateDao, sessionService);
@@ -65,7 +90,11 @@ public class WebApp {
         server.createContext("/api/gk/templates", templateController::handleTemplates);
 
         server.createContext("/api/products", new ProductsHandler(productService));
+        server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
+
         server.createContext("/api/passports", new PassportsHandler(passportService));
+
+        
 
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
