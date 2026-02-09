@@ -7,7 +7,6 @@ public class User {
     private final String passwordHash;
     private final Role role;
 
-    /** Full constructor (from DB or in-memory store). */
     public User(long id, String username, String passwordHash, Role role) {
         this.id = id;
         this.username = username;
@@ -15,7 +14,6 @@ public class User {
         this.role = role;
     }
 
-    /** Convenience constructor for tests that do not need id/passwordHash. */
     public User(String username, Role role) {
         this(0, username, null, role);
     }

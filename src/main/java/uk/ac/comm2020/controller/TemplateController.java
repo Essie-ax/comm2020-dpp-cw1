@@ -1,10 +1,10 @@
 package uk.ac.comm2020.controller;
 
-import uk.ac.comm2020.service.TemplateService;
-import uk.ac.comm2020.util.HttpUtil;
-import uk.ac.comm2020.util.ApiResponse;
-
 import com.sun.net.httpserver.HttpExchange;
+import uk.ac.comm2020.service.TemplateService;
+import uk.ac.comm2020.util.ApiResponse;
+import uk.ac.comm2020.util.HttpUtil;
+
 import java.io.IOException;
 
 public class TemplateController {

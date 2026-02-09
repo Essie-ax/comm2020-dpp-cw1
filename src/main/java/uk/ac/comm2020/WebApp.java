@@ -3,61 +3,73 @@ package uk.ac.comm2020;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import uk.ac.comm2020.api.PassportsHandler;
+import uk.ac.comm2020.api.ProductsHandler;
+import uk.ac.comm2020.api.TemplateByIdHandler;
+import uk.ac.comm2020.api.TemplatesHandler;
+import uk.ac.comm2020.config.EnvConfig;
+import uk.ac.comm2020.controller.AuthController;
+import uk.ac.comm2020.controller.TemplateController;
+import uk.ac.comm2020.dao.InMemoryUserDao;
+import uk.ac.comm2020.dao.PassportDao;
+import uk.ac.comm2020.dao.ProductDao;
+import uk.ac.comm2020.dao.TemplateDao;
+import uk.ac.comm2020.db.Database;
+import uk.ac.comm2020.service.PassportService;
+import uk.ac.comm2020.service.ProductService;
+import uk.ac.comm2020.service.SessionService;
+import uk.ac.comm2020.service.TemplateService;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import java.net.InetSocketAddress;
-
 import java.nio.charset.StandardCharsets;
-
-
-import uk.ac.comm2020.controller.AuthController;
-import uk.ac.comm2020.controller.TemplateController;
-import uk.ac.comm2020.dao.InMemoryTemplateDao;
-import uk.ac.comm2020.dao.InMemoryUserDao;
-import uk.ac.comm2020.dao.MySqlTemplateDao;
-import uk.ac.comm2020.dao.MySqlUserDao;
-import uk.ac.comm2020.dao.TemplateDao;
-import uk.ac.comm2020.dao.UserDao;
-import uk.ac.comm2020.service.SessionService;
-import uk.ac.comm2020.service.TemplateService;
-import uk.ac.comm2020.util.Db;
-
+import java.util.concurrent.Executors;
 
 public class WebApp {
 
-    public static void main(String[] args) throws Exception {
-        int port = 8080;
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+    public static void main(String[] args) throws IOException {
+        EnvConfig config = EnvConfig.load();
+        int port = config.getInt("APP_PORT", 8080);
 
-        boolean useDb = Db.hasUrl() && Db.tryConnection();
-        UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
-        TemplateDao templateDao = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
-        if (useDb) {
-            System.out.println("Using MySQL (UserDao + Template DAO, DB connected)");
-        } else {
-            if (Db.hasUrl()) {
-                System.out.println("DB_URL set but connection failed -> Using In-memory (UserDao + Template DAO). Start MySQL or remove .env to avoid this message.");
-            } else {
-                System.out.println("Using In-memory (UserDao + Template DAO, no DB_URL)");
-            }
-        }
+        Database database = new Database(config);
 
-        SessionService sessionService = new SessionService(userDao);
-        TemplateService templateService = new TemplateService(templateDao, sessionService);
+        TemplateDao templateDao = new TemplateDao(database);
+        ProductDao productDao = new ProductDao(database);
+
+        SessionService sessionService = new SessionService(new InMemoryUserDao());
+        TemplateService templateService = new TemplateService(templateDao);
+        ProductService productService = new ProductService(productDao);
+
+        PassportService passportService = new PassportService(
+                new PassportDao(database),
+                templateDao,
+                productDao
+        );
 
         AuthController authController = new AuthController(sessionService);
-        TemplateController templateController = new TemplateController(templateService);
 
-        // Register contexts
+        TemplateService templateServiceWithSession = new TemplateService(templateDao, sessionService);
+        TemplateController templateController = new TemplateController(templateServiceWithSession);
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+
         server.createContext("/", WebApp::handleStatic);
-        server.createContext("/api/auth/login", authController::handleLogin);
-        server.createContext("/api/templates", templateController::handleTemplates);
 
-        server.setExecutor(null);
+        server.createContext("/api/auth/login", authController::handleLogin);
+
+        server.createContext("/api/templates", new TemplatesHandler(templateService));
+        server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
+
+        server.createContext("/api/gk/templates", templateController::handleTemplates);
+
+        server.createContext("/api/products", new ProductsHandler(productService));
+        server.createContext("/api/passports", new PassportsHandler(passportService));
+
+        server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
+
         System.out.println("Server running: http://localhost:" + port + "/login.html");
     }
 
@@ -70,14 +82,13 @@ public class WebApp {
         String path = ex.getRequestURI().getPath();
         if (path.equals("/") || path.isEmpty()) path = "/login.html";
 
-        
         if (path.contains("..")) {
             sendText(ex, 400, "Bad Request");
             return;
         }
 
-        String resourcePath = "static" + path; 
-        InputStream in = WebApp.class.getClassLoader().getResourceAsStream(resourcePath);
+        String resourcePath = "static" + path;
+        InputStream in = App.class.getClassLoader().getResourceAsStream(resourcePath);
 
         if (in == null) {
             sendText(ex, 404, "Not Found: " + path);
@@ -97,17 +108,18 @@ public class WebApp {
         if (path.endsWith(".html")) return "text/html; charset=utf-8";
         if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
         if (path.endsWith(".css")) return "text/css; charset=utf-8";
+        if (path.endsWith(".png")) return "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        if (path.endsWith(".svg")) return "image/svg+xml; charset=utf-8";
         return "application/octet-stream";
     }
 
-    
-  private static void sendText(HttpExchange ex, int status, String text) throws IOException {
-    byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-    ex.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
-    ex.sendResponseHeaders(status, bytes.length);
-    try (OutputStream os = ex.getResponseBody()) {
-      os.write(bytes);
+    private static void sendText(HttpExchange ex, int status, String text) throws IOException {
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        ex.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+        ex.sendResponseHeaders(status, bytes.length);
+        try (OutputStream os = ex.getResponseBody()) {
+            os.write(bytes);
+        }
     }
-  }
-
 }
