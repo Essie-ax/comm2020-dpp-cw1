@@ -1,8 +1,99 @@
-<!doctype html><html><body>
-<h2>GameKeeper Home</h2>
-<p id="info"></p>
-<script>
-  document.getElementById("info").textContent =
-    "token=" + localStorage.getItem("token") + ", role=" + localStorage.getItem("role");
-</script>
-</body></html>
+<!doctype html>
+<html>
+<head>
+  <title>GameKeeper - Challenge Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 16px; }
+    h2 { color: #333; }
+    h3 { margin-top: 24px; color: #555; }
+    input, select { padding: 6px 10px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 220px; }
+    button { padding: 8px 18px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+    .btn-primary { background: #4a90d9; }
+    .btn-primary:hover { background: #357abd; }
+    .btn-secondary { background: #888; }
+    .btn-small { padding: 4px 12px; font-size: 13px; background: #5cb85c; }
+    .btn-small:hover { background: #449d44; }
+    .msg-ok { color: green; margin: 8px 0; }
+    .msg-err { color: red; margin: 8px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+    th { background: #f5f5f5; }
+    .detail-box { background: #f9f9f9; border: 1px solid #ddd; padding: 16px; margin-top: 8px; border-radius: 4px; }
+    .detail-box p { margin: 4px 0; }
+    .form-row { margin: 8px 0; }
+    .form-row label { display: inline-block; width: 140px; font-size: 14px; }
+    #info { color: #666; font-size: 13px; }
+    a { color: #4a90d9; cursor: pointer; }
+    hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <h2>GameKeeper Dashboard</h2>
+  <p id="info"></p>
+  <a href="/login.html" id="logout">Logout</a>
+
+  <hr>
+
+  <!-- ===== Create Challenge ===== -->
+  <h3>Create Challenge</h3>
+  <div id="createSection">
+    <div class="form-row">
+      <label for="title">Title *</label>
+      <input id="title" placeholder="e.g. Battery Compliance Sprint" />
+    </div>
+    <div class="form-row">
+      <label for="category">Category *</label>
+      <select id="category">
+        <option value="Battery">Battery</option>
+        <option value="Electronics">Electronics</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="startDate">Start Date *</label>
+      <input id="startDate" type="date" />
+    </div>
+    <div class="form-row">
+      <label for="endDate">End Date *</label>
+      <input id="endDate" type="date" />
+    </div>
+    <div class="form-row">
+      <label for="minCompleteness">Min Completeness</label>
+      <input id="minCompleteness" type="number" min="0" max="100" value="80" placeholder="0-100" />
+      <span style="font-size:12px;color:#999">% (default 80)</span>
+    </div>
+    <div style="margin-top: 12px;">
+      <button class="btn-primary" id="createBtn">Create Challenge</button>
+      <button class="btn-secondary" id="resetBtn">Reset</button>
+    </div>
+    <div id="createMsg"></div>
+  </div>
+
+  <hr>
+
+  <!-- ===== Challenge List ===== -->
+  <h3>Challenge List</h3>
+  <div id="listMsg"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Title</th>
+        <th>Category</th>
+        <th>Start</th>
+        <th>End</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="challengeList"></tbody>
+  </table>
+
+  <hr>
+
+  <!-- ===== Challenge Detail ===== -->
+  <h3>Challenge Detail</h3>
+  <div id="detailSection" style="display:none" class="detail-box"></div>
+  <p id="detailPlaceholder" style="color:#999;font-size:13px;">Click "View" on a challenge to see details.</p>
+
+  <script src="/js/challenge.js"></script>
+</body>
+</html>

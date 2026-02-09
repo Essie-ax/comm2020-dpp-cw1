@@ -14,13 +14,18 @@ import java.nio.charset.StandardCharsets;
 
 
 import uk.ac.comm2020.controller.AuthController;
+import uk.ac.comm2020.controller.ChallengeController;
 import uk.ac.comm2020.controller.TemplateController;
+import uk.ac.comm2020.dao.ChallengeDao;
+import uk.ac.comm2020.dao.InMemoryChallengeDao;
 import uk.ac.comm2020.dao.InMemoryTemplateDao;
 import uk.ac.comm2020.dao.InMemoryUserDao;
+import uk.ac.comm2020.dao.MySqlChallengeDao;
 import uk.ac.comm2020.dao.MySqlTemplateDao;
 import uk.ac.comm2020.dao.MySqlUserDao;
 import uk.ac.comm2020.dao.TemplateDao;
 import uk.ac.comm2020.dao.UserDao;
+import uk.ac.comm2020.service.ChallengeService;
 import uk.ac.comm2020.service.SessionService;
 import uk.ac.comm2020.service.TemplateService;
 import uk.ac.comm2020.util.Db;
@@ -35,6 +40,7 @@ public class WebApp {
         boolean useDb = Db.hasUrl() && Db.tryConnection();
         UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
         TemplateDao templateDao = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
+        ChallengeDao challengeDao = useDb ? new MySqlChallengeDao() : new InMemoryChallengeDao();
         if (useDb) {
             System.out.println("Using MySQL (UserDao + Template DAO, DB connected)");
         } else {
@@ -47,14 +53,17 @@ public class WebApp {
 
         SessionService sessionService = new SessionService(userDao);
         TemplateService templateService = new TemplateService(templateDao, sessionService);
+        ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
 
         AuthController authController = new AuthController(sessionService);
         TemplateController templateController = new TemplateController(templateService);
+        ChallengeController challengeController = new ChallengeController(challengeService);
 
         // Register contexts
         server.createContext("/", WebApp::handleStatic);
         server.createContext("/api/auth/login", authController::handleLogin);
         server.createContext("/api/templates", templateController::handleTemplates);
+        server.createContext("/api/challenges", challengeController::handleChallenges);
 
         server.setExecutor(null);
         server.start();
