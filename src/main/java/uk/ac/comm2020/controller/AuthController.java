@@ -1,10 +1,10 @@
 package uk.ac.comm2020.controller;
 
-import com.sun.net.httpserver.HttpExchange;
 import uk.ac.comm2020.service.SessionService;
-import uk.ac.comm2020.util.ApiResponse;
 import uk.ac.comm2020.util.HttpUtil;
+import uk.ac.comm2020.util.ApiResponse;
 
+import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.util.Map;
 

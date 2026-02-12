@@ -2,122 +2,16 @@
 <html>
 <body>
   <h2>Login</h2>
-  <form id="loginForm">
-    <div>
-      <input id="username" placeholder="username" />
-    </div>
-    <div style="margin-top:10px">
-      <input id="password" type="password" placeholder="password" />
-    </div>
-    <button id="btn" type="submit" style="margin-top:10px">Log in</button>
-  </form>
+  <div>
+    <input id="username" placeholder="username" />
+  </div>
+  <div style="margin-top:10px">
+    <input id="password" type="password" placeholder="password" />
+  </div>
+  <button id="btn" style="margin-top:10px">Log in</button>
   <div id="err" style="color:red;margin-top:10px;"></div>
   <p style="margin-top:16px;color:#666;font-size:12px">Demo: player1 / gamekeeper1, password: password</p>
 
-  <script>
-    const byId = (id) => document.getElementById(id);
-    const loginForm = byId("loginForm");
-    const errBox = byId("err");
-
-    function pickValue(obj, paths) {
-      for (const path of paths) {
-        let cur = obj;
-        let ok = true;
-        for (const key of path) {
-          if (!cur || cur[key] === undefined || cur[key] === null) {
-            ok = false;
-            break;
-          }
-          cur = cur[key];
-        }
-        if (ok) return cur;
-      }
-      return null;
-    }
-
-    async function handleLogin(e) {
-      e.preventDefault();
-      errBox.textContent = "";
-
-      const username = byId("username").value.trim();
-      const password = byId("password").value;
-
-      if (!username || !password) {
-        const msg = "请输入用户名和密码。";
-        errBox.textContent = msg;
-        alert(msg);
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password })
-        });
-
-        const json = await res.json().catch(() => null);
-        if (!json) {
-          const msg = `登录失败（状态码 ${res.status}）`;
-          errBox.textContent = msg;
-          alert(msg);
-          return;
-        }
-
-        const token = pickValue(json, [
-          ["token"],
-          ["data", "token"],
-          ["data", "data", "token"],
-          ["accessToken"],
-          ["data", "accessToken"]
-        ]);
-        const role = pickValue(json, [
-          ["role"],
-          ["data", "role"],
-          ["data", "data", "role"],
-          ["data", "user", "role"]
-        ]);
-        const userId = pickValue(json, [
-          ["userId"],
-          ["data", "userId"],
-          ["data", "data", "userId"],
-          ["data", "user", "id"],
-          ["data", "user", "userId"]
-        ]);
-
-        if (!res.ok || !token || !role) {
-          const msg = json.error?.message || "登录失败，请检查账号密码。";
-          errBox.textContent = msg;
-          alert(msg);
-          return;
-        }
-
-        localStorage.setItem("token", token);
-        localStorage.setItem("role", role);
-        if (userId !== null && userId !== undefined) {
-          localStorage.setItem("userId", String(userId));
-        }
-
-        if (role === "PLAYER") {
-          window.location.href = "/consumer.html";
-          return;
-        }
-        if (role === "GAME_KEEPER" || role === "GAMEKEEPER") {
-          window.location.href = "/authoring.html";
-          return;
-        }
-
-        const msg = "登录成功，但角色不支持。";
-        errBox.textContent = msg;
-        alert(msg);
-      } catch (err) {
-        const msg = "网络错误（后端未启动？）";
-        errBox.textContent = msg;
-        alert(msg);
-      }
-    }
-
-    loginForm.addEventListener("submit", handleLogin);
-  </script>
+  <script src="/js/auth.js"></script>
 </body>
 </html>
