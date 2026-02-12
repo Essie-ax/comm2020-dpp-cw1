@@ -8,6 +8,7 @@ import uk.ac.comm2020.service.SessionService;
 import uk.ac.comm2020.util.ApiResponse;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -69,8 +70,8 @@ public class ChallengeServiceTest {
 
         ApiResponse res = service.getChallenges(null);
         assertTrue(res.isSuccess());
-        Object[] challenges = (Object[]) res.getData().get("challenges");
-        assertTrue(challenges.length >= 1); // at least the seeded demo
+        List<?> challenges = (List<?>) res.getData().get("challenges");
+        assertTrue(challenges.size() >= 1); // at least the seeded demo
     }
 
     // --- Test 4: Detail for non-existent id returns NOT_FOUND ---
