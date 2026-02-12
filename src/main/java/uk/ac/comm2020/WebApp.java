@@ -9,25 +9,13 @@ import uk.ac.comm2020.api.TemplateByIdHandler;
 import uk.ac.comm2020.api.TemplatesHandler;
 import uk.ac.comm2020.config.EnvConfig;
 import uk.ac.comm2020.controller.AuthController;
-import uk.ac.comm2020.controller.TemplateController;
-import uk.ac.comm2020.dao.InMemoryUserDao;
-import uk.ac.comm2020.dao.PassportDao;
-import uk.ac.comm2020.dao.ProductDao;
-import uk.ac.comm2020.dao.TemplateDao;
-import uk.ac.comm2020.db.Database;
-import uk.ac.comm2020.service.PassportService;
-import uk.ac.comm2020.service.ProductService;
-import uk.ac.comm2020.service.SessionService;
-import uk.ac.comm2020.service.TemplateService;
-
+import uk.ac.comm2020.controller.ChallengeController;
+import uk.ac.comm2020.controller.LeaderboardController;
 import uk.ac.comm2020.controller.PassportValidationController;
-import uk.ac.comm2020.dao.EvidenceDao;
-import uk.ac.comm2020.dao.PassportDao;
-import uk.ac.comm2020.service.EvidenceService;
-import uk.ac.comm2020.service.PassportValidationService;
-import uk.ac.comm2020.service.ScoringService;
-import uk.ac.comm2020.service.ValidationService;
-
+import uk.ac.comm2020.dao.*;
+import uk.ac.comm2020.db.Database;
+import uk.ac.comm2020.service.*;
+import uk.ac.comm2020.util.Db;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,69 +24,89 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executors;
 
+
 public class WebApp {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws Exception {
         EnvConfig config = EnvConfig.load();
         int port = config.getInt("APP_PORT", 8080);
 
-        Database database = new Database(config);
+        // Database connection with fallback
+        Database database = null;
+        boolean useDb = Db.hasUrl() && Db.tryConnection();
+        if (useDb) {
+            database = new Database(config);
+            System.out.println("Using MySQL (DB connected)");
+        } else {
+            if (Db.hasUrl()) {
+                System.out.println("DB_URL set but connection failed -> Using In-memory DAOs. Start MySQL or remove .env to avoid this message.");
+            } else {
+                System.out.println("Using In-memory DAOs (no DB_URL)");
+            }
+        }
 
-        TemplateDao templateDao = new TemplateDao(database);
-        ProductDao productDao = new ProductDao(database);
+        // Initialize DAOs
+        UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
+        ChallengeDao challengeDao = useDb ? new MySqlChallengeDao() : new InMemoryChallengeDao();
+        SubmissionDao submissionDao = useDb ? new MySqlSubmissionDao() : new InMemorySubmissionDao();
 
-        SessionService sessionService = new SessionService(new InMemoryUserDao());
-        TemplateService templateService = new TemplateService(templateDao);
-        ProductService productService = new ProductService(productDao);
+        // DAOs from main branch (require database)
+        TemplateDao templateDao = useDb ? new TemplateDao(database) : null;
+        ProductDao productDao = useDb ? new ProductDao(database) : null;
+        PassportDao passportDao = useDb ? new PassportDao(database) : null;
+        EvidenceDao evidenceDao = useDb ? new EvidenceDao(database) : null;
 
-        PassportService passportService = new PassportService(
-                new PassportDao(database),
-                templateDao,
-                productDao
-        );
+        // Initialize Services
+        SessionService sessionService = new SessionService(userDao);
+        
+        // Challenge and Submission services (Module D - 中4)
+        ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
+        SubmissionService submissionService = new SubmissionService(submissionDao, challengeDao, sessionService);
+        LeaderboardService leaderboardService = new LeaderboardService(submissionDao);
 
-// ---- Module C: validation / scoring / evidence ----
-PassportDao passportDaoForValidation = new PassportDao(database);
+        // Template service (中1)
+        TemplateService templateService = useDb ? new TemplateService(templateDao) : null;
 
-EvidenceDao evidenceDao = new EvidenceDao(database);
-EvidenceService evidenceService = new EvidenceService(evidenceDao);
+        // Product and Passport services (中1, 中2)
+        ProductService productService = useDb ? new ProductService(productDao) : null;
+        PassportService passportService = useDb ? new PassportService(passportDao, templateDao, productDao) : null;
 
-ValidationService validationService = new ValidationService();
-ScoringService scoringService = new ScoringService();
+        // Validation and Evidence services (中3)
+        EvidenceService evidenceService = useDb ? new EvidenceService(evidenceDao) : null;
+        ValidationService validationService = useDb ? new ValidationService() : null;
+        ScoringService scoringService = useDb ? new ScoringService() : null;
+        PassportValidationService passportValidationService = useDb ? 
+                new PassportValidationService(passportDao, evidenceService, validationService, scoringService) : null;
 
-PassportValidationService passportValidationService =
-        new PassportValidationService(passportDaoForValidation, evidenceService, validationService, scoringService);
-
-PassportValidationController passportValidationController =
-        new PassportValidationController(passportValidationService);
-
-
+        // Initialize Controllers
         AuthController authController = new AuthController(sessionService);
+        ChallengeController challengeController = new ChallengeController(challengeService, submissionService);
+        LeaderboardController leaderboardController = new LeaderboardController(leaderboardService);
+        PassportValidationController passportValidationController = useDb ? 
+                new PassportValidationController(passportValidationService) : null;
 
-        TemplateService templateServiceWithSession = new TemplateService(templateDao, sessionService);
-        TemplateController templateController = new TemplateController(templateServiceWithSession);
-
+        // Create server
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
+        // Register contexts
         server.createContext("/", WebApp::handleStatic);
-
         server.createContext("/api/auth/login", authController::handleLogin);
-
-        server.createContext("/api/templates", new TemplatesHandler(templateService));
-        server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
-
-        server.createContext("/api/gk/templates", templateController::handleTemplates);
-
-        server.createContext("/api/products", new ProductsHandler(productService));
-        server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
-
-        server.createContext("/api/passports", new PassportsHandler(passportService));
-
         
+        // Challenge and Leaderboard routes (Module D - 中4)
+        server.createContext("/api/challenges", challengeController::handleChallenges);
+        server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
+        
+        // Template, Product and Passport routes (中1, 中2, 中3) - only when DB is available
+        if (useDb) {
+            server.createContext("/api/templates", new TemplatesHandler(templateService));
+            server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
+            server.createContext("/api/products", new ProductsHandler(productService));
+            server.createContext("/api/passports", new PassportsHandler(passportService));
+            server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
+        }
 
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
-
         System.out.println("Server running: http://localhost:" + port + "/login.html");
     }
 
@@ -117,7 +125,7 @@ PassportValidationController passportValidationController =
         }
 
         String resourcePath = "static" + path;
-        InputStream in = App.class.getClassLoader().getResourceAsStream(resourcePath);
+        InputStream in = WebApp.class.getClassLoader().getResourceAsStream(resourcePath);
 
         if (in == null) {
             sendText(ex, 404, "Not Found: " + path);
