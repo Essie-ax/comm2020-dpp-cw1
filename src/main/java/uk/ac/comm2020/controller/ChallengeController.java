@@ -1,6 +1,7 @@
 package uk.ac.comm2020.controller;
 
 import uk.ac.comm2020.service.ChallengeService;
+import uk.ac.comm2020.service.SubmissionService;
 import uk.ac.comm2020.util.HttpUtil;
 import uk.ac.comm2020.util.ApiResponse;
 
@@ -11,17 +12,39 @@ import java.util.Map;
 public class ChallengeController {
 
     private final ChallengeService challengeService;
+    private final SubmissionService submissionService;
 
-    public ChallengeController(ChallengeService challengeService) {
+    public ChallengeController(ChallengeService challengeService, SubmissionService submissionService) {
         this.challengeService = challengeService;
+        this.submissionService = submissionService;
     }
 
-    /** Routes /api/challenges and /api/challenges/{id}. */
+    /** Routes /api/challenges, /api/challenges/{id}, /api/challenges/{id}/submit. */
     public void handleChallenges(HttpExchange ex) throws IOException {
         String path = ex.getRequestURI().getPath();
         String method = ex.getRequestMethod().toUpperCase();
 
-        // --- /api/challenges/{id} (detail) ---
+        // --- POST /api/challenges/{id}/submit ---
+        if (path.matches("/api/challenges/\\d+/submit")) {
+            if (!"POST".equals(method)) {
+                HttpUtil.sendJson(ex, 405, ApiResponse.error("METHOD_NOT_ALLOWED", "Only POST allowed"));
+                return;
+            }
+            String idStr = path.replaceAll("/api/challenges/(\\d+)/submit", "$1");
+            long challengeId = Long.parseLong(idStr);
+
+            String auth = ex.getRequestHeaders().getFirst("Authorization");
+            String token = HttpUtil.extractBearerToken(auth);
+            String body = HttpUtil.readBody(ex);
+            Map<String, String> params = HttpUtil.parseVerySimpleJson(body);
+
+            ApiResponse res = submissionService.submit(token, challengeId, params);
+            int status = res.isSuccess() ? 201 : res.getStatus();
+            HttpUtil.sendJson(ex, status, res);
+            return;
+        }
+
+        // --- GET /api/challenges/{id} (detail) ---
         if (path.matches("/api/challenges/\\d+")) {
             if (!"GET".equals(method)) {
                 HttpUtil.sendJson(ex, 405, ApiResponse.error("METHOD_NOT_ALLOWED", "Only GET allowed"));
