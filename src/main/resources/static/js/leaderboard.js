@@ -1,10 +1,21 @@
 const $ = (id) => document.getElementById(id);
 
-// Show user info on page load
+// Show user info and role-based navigation
 function initLeaderboardPage() {
   const userId = localStorage.getItem("userId") || "?";
   const role = localStorage.getItem("role") || "?";
   $("info").textContent = "Logged in as: " + userId + " | role: " + role;
+
+  // Show nav links based on role
+  if (role === "PLAYER") {
+    $("navPlayer").style.display = "inline";
+  } else if (role === "GAME_KEEPER" || role === "GAMEKEEPER") {
+    $("navGk").style.display = "inline";
+  } else {
+    // Show both if unknown
+    $("navPlayer").style.display = "inline";
+    $("navGk").style.display = "inline";
+  }
 }
 
 // Validate challenge id input

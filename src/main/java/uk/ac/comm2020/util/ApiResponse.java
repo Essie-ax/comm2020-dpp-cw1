@@ -1,6 +1,7 @@
 package uk.ac.comm2020.util;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ApiResponse {
@@ -31,30 +32,60 @@ public class ApiResponse {
         sb.append("{");
         sb.append("\"success\":").append(success).append(",");
         if (success) {
-            sb.append("\"data\":").append(mapToJson(data));
+            sb.append("\"data\":").append(valueToJson(data));
         } else {
-            sb.append("\"error\":").append(mapToJson(error));
+            sb.append("\"error\":").append(valueToJson(error));
         }
         sb.append("}");
         return sb.toString();
     }
 
-    private String mapToJson(Map<String, Object> map) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        map.forEach((key, value) -> {
-            sb.append("\"").append(JsonUtil.escape(key)).append("\":");
-            if (value instanceof String) {
-                sb.append("\"").append(JsonUtil.escape(value.toString())).append("\",");
-            } else {
-                sb.append(value).append(",");
-            }
-        });
-        if (!map.isEmpty()) {
-            sb.setLength(sb.length() - 1);
+    /** Convert any value to JSON string. Handles Map, List, array, String, Number, Boolean, null. */
+    @SuppressWarnings("unchecked")
+    private static String valueToJson(Object value) {
+        if (value == null) return "null";
+
+        if (value instanceof String) {
+            return "\"" + JsonUtil.escape((String) value) + "\"";
         }
-        sb.append("}");
-        return sb.toString();
+        if (value instanceof Number || value instanceof Boolean) {
+            return value.toString();
+        }
+        if (value instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) value;
+            StringBuilder sb = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                if (!first) sb.append(",");
+                sb.append("\"").append(JsonUtil.escape(entry.getKey())).append("\":");
+                sb.append(valueToJson(entry.getValue()));
+                first = false;
+            }
+            sb.append("}");
+            return sb.toString();
+        }
+        if (value instanceof List) {
+            List<?> list = (List<?>) value;
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(valueToJson(list.get(i)));
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        if (value instanceof Object[]) {
+            Object[] arr = (Object[]) value;
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < arr.length; i++) {
+                if (i > 0) sb.append(",");
+                sb.append(valueToJson(arr[i]));
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        // Fallback: treat as string
+        return "\"" + JsonUtil.escape(value.toString()) + "\"";
     }
 
     public int getStatus() {

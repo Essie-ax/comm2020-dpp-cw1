@@ -7,6 +7,12 @@ function initChallengeSection() {
   $("info").textContent = "Logged in as: " + (localStorage.getItem("userId") || "?")
       + " | role: " + (role || "?");
 
+  // If Player, redirect to player.html
+  if (role === "PLAYER") {
+    window.location.href = "/player.html";
+    return;
+  }
+
   // Hide create form if not GameKeeper
   if (role !== "GAME_KEEPER" && role !== "GAMEKEEPER") {
     $("createSection").style.display = "none";
