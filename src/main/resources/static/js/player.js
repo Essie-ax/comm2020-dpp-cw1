@@ -43,13 +43,14 @@ function renderChallenges(list) {
     return;
   }
   tbody.innerHTML = list.map(function (c) {
+    var cid = c.challengeId || c.id;
     return '<tr>' +
-      '<td>' + esc(String(c.id)) + '</td>' +
+      '<td>' + esc(String(cid)) + '</td>' +
       '<td>' + esc(c.title || "") + '</td>' +
       '<td>' + esc(c.category || "") + '</td>' +
       '<td>' + esc(c.startDate || "") + '</td>' +
       '<td>' + esc(c.endDate || "") + '</td>' +
-      '<td><button class="btn-primary" onclick="selectChallenge(' + c.id + ')">Select</button></td>' +
+      '<td><button class="btn-primary" onclick="selectChallenge(' + cid + ')">Select</button></td>' +
       '</tr>';
   }).join("");
 }

@@ -68,7 +68,7 @@ public class ChallengeService {
     public ApiResponse getChallenges(String category) {
         List<Map<String, Object>> list = challengeDao.getChallenges(category);
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("challenges", list.toArray(new Object[0]));
+        data.put("challenges", list);
         return ApiResponse.ok(data);
     }
 
