@@ -21,11 +21,14 @@ This repo contains the CW1 vertical slice for the Digital Product Passport Build
 4) Start backend
 5) Open the app
 
-## Contracts
-- API contract: `docs/api-contract.md`
-- Data dictionary: `docs/data-dictionary.md`
-- Contract change process: `docs/contract-change-process.md`
+## Run with MySQL locally
+Set environment variables and run the app.
 
-## Notes
-- Do not change DB schema/API shapes without following the contract change process.
-- Do not commit secrets (use environment variables).
+Example env and commands:
+
+```bash
+export DB_URL="jdbc:mysql://localhost:3306/comm2020?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+export DB_USER="your_db_user"
+export DB_PASS="your_db_pass"
+mvn clean package
+java -cp target/comm2020-dpp-cw1-0.1.0.jar uk.ac.comm2020.WebApp
