@@ -3,80 +3,118 @@ package uk.ac.comm2020;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import uk.ac.comm2020.api.PassportsHandler;
+import uk.ac.comm2020.api.ProductsHandler;
+import uk.ac.comm2020.api.TemplateByIdHandler;
+import uk.ac.comm2020.api.TemplatesHandler;
+import uk.ac.comm2020.config.EnvConfig;
+import uk.ac.comm2020.controller.AuthController;
+import uk.ac.comm2020.controller.ChallengeController;
+import uk.ac.comm2020.controller.LeaderboardController;
+import uk.ac.comm2020.controller.PassportValidationController;
+import uk.ac.comm2020.controller.TemplateController;
+import uk.ac.comm2020.dao.*;
+import uk.ac.comm2020.db.Database;
+import uk.ac.comm2020.service.*;
+import uk.ac.comm2020.util.Db;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-
 import java.net.InetSocketAddress;
-
 import java.nio.charset.StandardCharsets;
-
-
-import uk.ac.comm2020.controller.AuthController;
-import uk.ac.comm2020.controller.ChallengeController;
-import uk.ac.comm2020.controller.LeaderboardController;
-import uk.ac.comm2020.controller.TemplateController;
-import uk.ac.comm2020.dao.ChallengeDao;
-import uk.ac.comm2020.dao.InMemoryChallengeDao;
-import uk.ac.comm2020.dao.InMemorySubmissionDao;
-import uk.ac.comm2020.dao.InMemoryTemplateDao;
-import uk.ac.comm2020.dao.InMemoryUserDao;
-import uk.ac.comm2020.dao.MySqlChallengeDao;
-import uk.ac.comm2020.dao.MySqlSubmissionDao;
-import uk.ac.comm2020.dao.MySqlTemplateDao;
-import uk.ac.comm2020.dao.MySqlUserDao;
-import uk.ac.comm2020.dao.SubmissionDao;
-import uk.ac.comm2020.dao.TemplateDao;
-import uk.ac.comm2020.dao.UserDao;
-import uk.ac.comm2020.service.ChallengeService;
-import uk.ac.comm2020.service.LeaderboardService;
-import uk.ac.comm2020.service.SessionService;
-import uk.ac.comm2020.service.SubmissionService;
-import uk.ac.comm2020.service.TemplateService;
-import uk.ac.comm2020.util.Db;
+import java.util.concurrent.Executors;
 
 
 public class WebApp {
 
     public static void main(String[] args) throws Exception {
-        int port = 8080;
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        EnvConfig config = EnvConfig.load();
+        int port = config.getInt("APP_PORT", 8080);
 
+        // Database connection with fallback
+        Database database = null;
         boolean useDb = Db.hasUrl() && Db.tryConnection();
-        UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
-        TemplateDao templateDao = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
-        ChallengeDao challengeDao = useDb ? new MySqlChallengeDao() : new InMemoryChallengeDao();
-        SubmissionDao submissionDao = useDb ? new MySqlSubmissionDao() : new InMemorySubmissionDao();
         if (useDb) {
-            System.out.println("Using MySQL (UserDao + Template DAO, DB connected)");
+            database = new Database(config);
+            System.out.println("Using MySQL (DB connected)");
         } else {
             if (Db.hasUrl()) {
-                System.out.println("DB_URL set but connection failed -> Using In-memory (UserDao + Template DAO). Start MySQL or remove .env to avoid this message.");
+                System.out.println("DB_URL set but connection failed -> Using In-memory DAOs. Start MySQL or remove .env to avoid this message.");
             } else {
-                System.out.println("Using In-memory (UserDao + Template DAO, no DB_URL)");
+                System.out.println("Using In-memory DAOs (no DB_URL)");
             }
         }
 
+        // Initialize DAOs
+        UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
+        uk.ac.comm2020.dao.TemplateDao templateDaoOld = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
+        ChallengeDao challengeDao = useDb ? new MySqlChallengeDao() : new InMemoryChallengeDao();
+        SubmissionDao submissionDao = useDb ? new MySqlSubmissionDao() : new InMemorySubmissionDao();
+
+        // New DAOs from main branch
+        TemplateDao templateDao = useDb ? new TemplateDao(database) : null;
+        ProductDao productDao = useDb ? new ProductDao(database) : null;
+        PassportDao passportDao = useDb ? new PassportDao(database) : null;
+        EvidenceDao evidenceDao = useDb ? new EvidenceDao(database) : null;
+
+        // Initialize Services
         SessionService sessionService = new SessionService(userDao);
-        TemplateService templateService = new TemplateService(templateDao, sessionService);
+        
+        // Template services (both old and new)
+        TemplateService templateServiceOld = new TemplateService(templateDaoOld, sessionService);
+        TemplateService templateService = useDb ? new TemplateService(templateDao) : templateServiceOld;
+        
+        // Challenge and Submission services (Module D - 中4)
         ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
         SubmissionService submissionService = new SubmissionService(submissionDao, challengeDao, sessionService);
         LeaderboardService leaderboardService = new LeaderboardService(submissionDao);
 
+        // Product and Passport services (中1, 中2)
+        ProductService productService = useDb ? new ProductService(productDao) : null;
+        PassportService passportService = useDb ? new PassportService(passportDao, templateDao, productDao) : null;
+
+        // Validation and Evidence services (中3)
+        EvidenceService evidenceService = useDb ? new EvidenceService(evidenceDao) : null;
+        ValidationService validationService = useDb ? new ValidationService() : null;
+        ScoringService scoringService = useDb ? new ScoringService() : null;
+        PassportValidationService passportValidationService = useDb ? 
+                new PassportValidationService(passportDao, evidenceService, validationService, scoringService) : null;
+
+        // Initialize Controllers
         AuthController authController = new AuthController(sessionService);
-        TemplateController templateController = new TemplateController(templateService);
+        TemplateController templateController = new TemplateController(templateServiceOld);
         ChallengeController challengeController = new ChallengeController(challengeService, submissionService);
         LeaderboardController leaderboardController = new LeaderboardController(leaderboardService);
+        PassportValidationController passportValidationController = useDb ? 
+                new PassportValidationController(passportValidationService) : null;
+
+        // Create server
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
         // Register contexts
         server.createContext("/", WebApp::handleStatic);
         server.createContext("/api/auth/login", authController::handleLogin);
-        server.createContext("/api/templates", templateController::handleTemplates);
+        
+        // Template routes
+        server.createContext("/api/gk/templates", templateController::handleTemplates);
+        if (useDb) {
+            server.createContext("/api/templates", new TemplatesHandler(templateService));
+            server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
+        }
+        
+        // Challenge and Leaderboard routes (Module D - 中4)
         server.createContext("/api/challenges", challengeController::handleChallenges);
         server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
+        
+        // Product and Passport routes (中1, 中2)
+        if (useDb) {
+            server.createContext("/api/products", new ProductsHandler(productService));
+            server.createContext("/api/passports", new PassportsHandler(passportService));
+            server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
+        }
 
-        server.setExecutor(null);
+        server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
         System.out.println("Server running: http://localhost:" + port + "/login.html");
     }
@@ -90,13 +128,12 @@ public class WebApp {
         String path = ex.getRequestURI().getPath();
         if (path.equals("/") || path.isEmpty()) path = "/login.html";
 
-        
         if (path.contains("..")) {
             sendText(ex, 400, "Bad Request");
             return;
         }
 
-        String resourcePath = "static" + path; 
+        String resourcePath = "static" + path;
         InputStream in = WebApp.class.getClassLoader().getResourceAsStream(resourcePath);
 
         if (in == null) {
@@ -117,17 +154,18 @@ public class WebApp {
         if (path.endsWith(".html")) return "text/html; charset=utf-8";
         if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
         if (path.endsWith(".css")) return "text/css; charset=utf-8";
+        if (path.endsWith(".png")) return "image/png";
+        if (path.endsWith(".jpg") || path.endsWith(".jpeg")) return "image/jpeg";
+        if (path.endsWith(".svg")) return "image/svg+xml; charset=utf-8";
         return "application/octet-stream";
     }
 
-    
-  private static void sendText(HttpExchange ex, int status, String text) throws IOException {
-    byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-    ex.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
-    ex.sendResponseHeaders(status, bytes.length);
-    try (OutputStream os = ex.getResponseBody()) {
-      os.write(bytes);
+    private static void sendText(HttpExchange ex, int status, String text) throws IOException {
+        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
+        ex.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+        ex.sendResponseHeaders(status, bytes.length);
+        try (OutputStream os = ex.getResponseBody()) {
+            os.write(bytes);
+        }
     }
-  }
-
 }

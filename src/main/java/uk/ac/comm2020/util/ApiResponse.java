@@ -42,44 +42,23 @@ public class ApiResponse {
     private String mapToJson(Map<String, Object> map) {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (!first) sb.append(",");
-            first = false;
-            sb.append("\"").append(JsonUtil.escape(entry.getKey())).append("\":");
-            sb.append(valueToJson(entry.getValue()));
+        map.forEach((key, value) -> {
+            sb.append("\"").append(JsonUtil.escape(key)).append("\":");
+            if (value instanceof String) {
+                sb.append("\"").append(JsonUtil.escape(value.toString())).append("\",");
+            } else {
+                sb.append(value).append(",");
+            }
+        });
+        if (!map.isEmpty()) {
+            sb.setLength(sb.length() - 1);
         }
         sb.append("}");
         return sb.toString();
     }
 
-    @SuppressWarnings("unchecked")
-    private String valueToJson(Object value) {
-        if (value == null) return "null";
-        if (value instanceof String) return "\"" + JsonUtil.escape((String) value) + "\"";
-        if (value instanceof Map) return mapToJson((Map<String, Object>) value);
-        if (value instanceof Object[]) {
-            StringBuilder sb = new StringBuilder("[");
-            Object[] arr = (Object[]) value;
-            for (int i = 0; i < arr.length; i++) {
-                if (i > 0) sb.append(",");
-                sb.append(valueToJson(arr[i]));
-            }
-            sb.append("]");
-            return sb.toString();
-        }
-        return String.valueOf(value);
-    }
-
     public int getStatus() {
-        if (success) return 200;
-        String code = (String) error.get("code");
-        if ("UNAUTHORIZED".equals(code)) return 401;
-        if ("FORBIDDEN".equals(code)) return 403;
-        if ("NOT_FOUND".equals(code)) return 404;
-        if ("BAD_REQUEST".equals(code)) return 400;
-        if ("METHOD_NOT_ALLOWED".equals(code)) return 405;
-        return 500;
+        return success ? 200 : ("UNAUTHORIZED".equals(error.get("code")) ? 401 : 403);
     }
 
     public boolean isSuccess() {

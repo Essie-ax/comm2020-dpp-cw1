@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Passport Authoring</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      header {
+        padding: 12px 0;
+        background: #eef2ff;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
+        border: 1px solid rgba(99, 102, 241, 0.15);
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0 0 8px;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid rgba(99, 102, 241, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 12px 32px rgba(148, 163, 184, 0.2);
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin: 10px 0 6px;
+      }
+      input, select, button, textarea {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        background: #ffffff;
+        color: #1f2937;
+      }
+      button {
+        background: #7da4ff;
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+      }
+      button.secondary {
+        background: #94a3b8;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .message {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #e8f0ff;
+        color: #1e3a8a;
+        display: none;
+      }
+      .message.error {
+        background: #ffe4e7;
+        color: #9f1239;
+      }
+      .status-line {
+        font-size: 0.95rem;
+        color: #64748b;
+        margin-top: 6px;
+      }
+      .input-error {
+        border-color: #fb7185;
+        background: #fff1f2;
+      }
+      .field-group-title {
+        margin: 10px 0 0;
+        font-weight: 700;
+        color: #475569;
+      }
+      @media (max-width: 600px) {
+        h1 {
+          font-size: 1.2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Passport Authoring</h1>
+        <div class="status-line" id="statusLine">Ready.</div>
+      </header>
+
+      <section class="card">
+        <div class="row">
+          <div>
+            <label for="categoryInput">Category</label>
+            <input id="categoryInput" type="text" value="Battery" placeholder="Battery">
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="loadBtn">Load Templates & Products</button>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="templateSelect">Template</label>
+            <select id="templateSelect"></select>
+          </div>
+          <div>
+            <label for="productSelect">Product</label>
+            <select id="productSelect"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>&nbsp;</label>
+            <button id="createPassportBtn" class="secondary">Create Draft Passport</button>
+          </div>
+        </div>
+        <div class="message" id="loadMessage"></div>
+      </section>
+
+      <section class="card" id="formCard" style="display:none;">
+        <div class="field-group-title">Required Fields</div>
+        <div id="requiredFields"></div>
+        <div class="field-group-title">Optional Fields</div>
+        <div id="optionalFields"></div>
+        <div class="row">
+          <div>
+            <label>&nbsp;</label>
+            <button id="saveBtn">Save Fields</button>
+          </div>
+        </div>
+        <div class="message" id="saveMessage"></div>
+      </section>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+      const token = localStorage.getItem("token");
+      const role = localStorage.getItem("role");
+      if (!token || (role !== "GAME_KEEPER" && role !== "GAMEKEEPER")) {
+        window.location.href = "/login.html";
+      }
+
+      // cache dom nodes, so later use easy
+      const categoryInput = document.getElementById("categoryInput");
+      const loadBtn = document.getElementById("loadBtn");
+      const templateSelect = document.getElementById("templateSelect");
+      const productSelect = document.getElementById("productSelect");
+      const createPassportBtn = document.getElementById("createPassportBtn");
+      const statusLine = document.getElementById("statusLine");
+      const loadMessage = document.getElementById("loadMessage");
+      const formCard = document.getElementById("formCard");
+      const requiredFieldsContainer = document.getElementById("requiredFields");
+      const optionalFieldsContainer = document.getElementById("optionalFields");
+      const saveBtn = document.getElementById("saveBtn");
+      const saveMessage = document.getElementById("saveMessage");
+
+      // keep some state here
+      let templatesById = {};
+      let currentPassportId = null;
+      let currentTemplate = null;
+      let fieldInputs = {};
+
+      // load templates + products by category
+      loadBtn.addEventListener("click", () => {
+        loadMessage.style.display = "none";
+        statusLine.textContent = "Loading templates and products...";
+
+        const category = categoryInput.value.trim();
+        if (!category) {
+          showMessage(loadMessage, "Please enter a category.", true);
+          statusLine.textContent = "Category missing.";
+          return;
+        }
+
+        // call two apis at same time
+        Promise.all([
+          apiFetch(`/api/templates?category=${encodeURIComponent(category)}`),
+          apiFetch(`/api/products?category=${encodeURIComponent(category)}`)
+        ])
+          .then(async ([templatesRes, productsRes]) => {
+            const templatesJson = await templatesRes.json();
+            const productsJson = await productsRes.json();
+
+            // backend use { success: true/false }
+            if (!templatesJson.success) {
+              throw new Error(templatesJson.error?.message || "Failed to load templates");
+            }
+            if (!productsJson.success) {
+              throw new Error(productsJson.error?.message || "Failed to load products");
+            }
+
+            updateTemplates(templatesJson.data.templates || []);
+            updateProducts(productsJson.data.products || []);
+
+            showMessage(loadMessage, "Loaded templates and products.", false);
+            statusLine.textContent = "Loaded. Select product and template.";
+          })
+          .catch((err) => {
+            showMessage(loadMessage, err.message, true);
+            statusLine.textContent = "Failed to load.";
+          });
+      });
+
+      // create draft passport
+      createPassportBtn.addEventListener("click", () => {
+        saveMessage.style.display = "none";
+
+        const productId = productSelect.value;
+        const templateId = templateSelect.value;
+        if (!productId || !templateId) {
+          showMessage(loadMessage, "Select both product and template.", true);
+          return;
+        }
+
+        statusLine.textContent = "Creating draft passport...";
+
+        apiFetch("/api/passports", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productId: Number(productId),
+            templateId: Number(templateId)
+          })
+        })
+          .then((res) => res.json())
+          .then((json) => {
+            if (!json.success) {
+              throw new Error(json.error?.message || "Failed to create passport");
+            }
+
+            // keep id + template in memory
+            currentPassportId = json.data.passportId;
+            currentTemplate = templatesById[templateId];
+
+            statusLine.textContent = `Draft passport #${currentPassportId} created.`;
+
+            // show form for this template
+            renderForm(currentTemplate);
+          })
+          .catch((err) => {
+            showMessage(loadMessage, err.message, true);
+            statusLine.textContent = "Failed to create passport.";
+          });
+      });
+
+      // save fields to backend
+      saveBtn.addEventListener("click", () => {
+        if (!currentPassportId) {
+          showMessage(saveMessage, "Create a passport first.", true);
+          return;
+        }
+
+        clearFieldErrors();
+
+        const fields = collectFields();
+        statusLine.textContent = "Saving fields...";
+
+        apiFetch(`/api/passports/${currentPassportId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields })
+        })
+          .then((res) => res.json())
+          .then((json) => {
+            if (!json.success) {
+              // show missing keys, and mark inputs red
+              const missing = json.error?.details?.missingFields || [];
+              if (missing.length) {
+                missing.forEach((key) => markFieldError(key));
+                showMessage(saveMessage, `Missing required fields: ${missing.join(", ")}`, true);
+              } else {
+                showMessage(saveMessage, json.error?.message || "Save failed.", true);
+              }
+              statusLine.textContent = "Validation failed.";
+              return;
+            }
+
+            showMessage(saveMessage, "Saved successfully.", false);
+            statusLine.textContent = "Saved.";
+          })
+          .catch((err) => {
+            showMessage(saveMessage, err.message, true);
+            statusLine.textContent = "Save failed.";
+          });
+      });
+
+      // fill template dropdown, also build a id->template map
+      function updateTemplates(templates) {
+        templatesById = {};
+        templateSelect.innerHTML = "";
+
+        templates.forEach((template) => {
+          templatesById[String(template.templateId)] = template;
+
+          const option = document.createElement("option");
+          option.value = template.templateId;
+          option.textContent = `#${template.templateId} (${template.category})`;
+          templateSelect.appendChild(option);
+        });
+      }
+
+      // fill product dropdown
+      function updateProducts(products) {
+        productSelect.innerHTML = "";
+
+        products.forEach((product) => {
+          const option = document.createElement("option");
+          option.value = product.productId;
+          option.textContent = `#${product.productId} ${product.name}`;
+          productSelect.appendChild(option);
+        });
+      }
+
+      // show input form by template fields
+      function renderForm(template) {
+        if (!template) {
+          return;
+        }
+
+        formCard.style.display = "block";
+        requiredFieldsContainer.innerHTML = "";
+        optionalFieldsContainer.innerHTML = "";
+        fieldInputs = {};
+
+        buildFieldGroup(template.requiredFields || [], requiredFieldsContainer, true);
+        buildFieldGroup(template.optionalFields || [], optionalFieldsContainer, false);
+      }
+
+      // build inputs for one group
+      function buildFieldGroup(fields, container, required) {
+        fields.forEach((fieldKey) => {
+          const wrapper = document.createElement("div");
+
+          const label = document.createElement("label");
+          label.textContent = required ? `${fieldKey} (required)` : fieldKey;
+
+          const input = document.createElement("input");
+          input.type = "text";
+          input.placeholder = fieldKey;
+          input.dataset.fieldKey = fieldKey;
+
+          wrapper.appendChild(label);
+          wrapper.appendChild(input);
+          container.appendChild(wrapper);
+
+          // keep ref, so later we can read / mark error
+          fieldInputs[fieldKey] = input;
+        });
+      }
+
+      // read values from inputs, make a fields object
+      function collectFields() {
+        const fields = {};
+        Object.keys(fieldInputs).forEach((key) => {
+          const value = fieldInputs[key].value.trim();
+          if (value) {
+            fields[key] = value;
+          }
+        });
+        return fields;
+      }
+
+      // clear red border on inputs
+      function clearFieldErrors() {
+        Object.values(fieldInputs).forEach((input) => {
+          input.classList.remove("input-error");
+        });
+      }
+
+      // mark one input as error
+      function markFieldError(fieldKey) {
+        const input = fieldInputs[fieldKey];
+        if (input) {
+          input.classList.add("input-error");
+        }
+      }
+
+      // show message box, error or normal
+      function showMessage(element, message, isError) {
+        element.textContent = message;
+        element.classList.toggle("error", isError);
+        element.style.display = "block";
+      }
+    </script>
+  </body>
+</html>
