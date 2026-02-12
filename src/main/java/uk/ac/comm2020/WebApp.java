@@ -61,7 +61,10 @@ public class WebApp {
         
         // Challenge and Submission services (Module D - 中4)
         ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
-        SubmissionService submissionService = new SubmissionService(submissionDao, challengeDao, sessionService);
+        // Use real PassportDao/EvidenceDao when DB is available, otherwise mock fallback
+        SubmissionService submissionService = useDb
+                ? new SubmissionService(submissionDao, challengeDao, sessionService, passportDao, evidenceDao)
+                : new SubmissionService(submissionDao, challengeDao, sessionService);
         LeaderboardService leaderboardService = new LeaderboardService(submissionDao);
 
         // Template service (中1)
