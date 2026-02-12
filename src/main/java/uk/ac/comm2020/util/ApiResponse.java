@@ -58,7 +58,18 @@ public class ApiResponse {
     }
 
     public int getStatus() {
-        return success ? 200 : ("UNAUTHORIZED".equals(error.get("code")) ? 401 : 403);
+        if (success) return 200;
+        String code = error != null ? String.valueOf(error.get("code")) : "";
+        switch (code) {
+            case "BAD_REQUEST": return 400;
+            case "UNAUTHORIZED": return 401;
+            case "FORBIDDEN": return 403;
+            case "NOT_FOUND": return 404;
+            case "METHOD_NOT_ALLOWED": return 405;
+            case "DATABASE_ERROR":
+            case "SERVER_ERROR": return 500;
+            default: return 400;
+        }
     }
 
     public boolean isSuccess() {

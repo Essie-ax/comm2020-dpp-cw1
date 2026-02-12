@@ -12,7 +12,6 @@ import uk.ac.comm2020.controller.AuthController;
 import uk.ac.comm2020.controller.ChallengeController;
 import uk.ac.comm2020.controller.LeaderboardController;
 import uk.ac.comm2020.controller.PassportValidationController;
-import uk.ac.comm2020.controller.TemplateController;
 import uk.ac.comm2020.dao.*;
 import uk.ac.comm2020.db.Database;
 import uk.ac.comm2020.service.*;
@@ -48,11 +47,10 @@ public class WebApp {
 
         // Initialize DAOs
         UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
-        uk.ac.comm2020.dao.TemplateDao templateDaoOld = useDb ? new MySqlTemplateDao() : new InMemoryTemplateDao();
         ChallengeDao challengeDao = useDb ? new MySqlChallengeDao() : new InMemoryChallengeDao();
         SubmissionDao submissionDao = useDb ? new MySqlSubmissionDao() : new InMemorySubmissionDao();
 
-        // New DAOs from main branch
+        // DAOs from main branch (require database)
         TemplateDao templateDao = useDb ? new TemplateDao(database) : null;
         ProductDao productDao = useDb ? new ProductDao(database) : null;
         PassportDao passportDao = useDb ? new PassportDao(database) : null;
@@ -61,14 +59,13 @@ public class WebApp {
         // Initialize Services
         SessionService sessionService = new SessionService(userDao);
         
-        // Template services (both old and new)
-        TemplateService templateServiceOld = new TemplateService(templateDaoOld, sessionService);
-        TemplateService templateService = useDb ? new TemplateService(templateDao) : templateServiceOld;
-        
         // Challenge and Submission services (Module D - 中4)
         ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
         SubmissionService submissionService = new SubmissionService(submissionDao, challengeDao, sessionService);
         LeaderboardService leaderboardService = new LeaderboardService(submissionDao);
+
+        // Template service (中1)
+        TemplateService templateService = useDb ? new TemplateService(templateDao) : null;
 
         // Product and Passport services (中1, 中2)
         ProductService productService = useDb ? new ProductService(productDao) : null;
@@ -83,7 +80,6 @@ public class WebApp {
 
         // Initialize Controllers
         AuthController authController = new AuthController(sessionService);
-        TemplateController templateController = new TemplateController(templateServiceOld);
         ChallengeController challengeController = new ChallengeController(challengeService, submissionService);
         LeaderboardController leaderboardController = new LeaderboardController(leaderboardService);
         PassportValidationController passportValidationController = useDb ? 
@@ -96,19 +92,14 @@ public class WebApp {
         server.createContext("/", WebApp::handleStatic);
         server.createContext("/api/auth/login", authController::handleLogin);
         
-        // Template routes
-        server.createContext("/api/gk/templates", templateController::handleTemplates);
-        if (useDb) {
-            server.createContext("/api/templates", new TemplatesHandler(templateService));
-            server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
-        }
-        
         // Challenge and Leaderboard routes (Module D - 中4)
         server.createContext("/api/challenges", challengeController::handleChallenges);
         server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
         
-        // Product and Passport routes (中1, 中2)
+        // Template, Product and Passport routes (中1, 中2, 中3) - only when DB is available
         if (useDb) {
+            server.createContext("/api/templates", new TemplatesHandler(templateService));
+            server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
             server.createContext("/api/products", new ProductsHandler(productService));
             server.createContext("/api/passports", new PassportsHandler(passportService));
             server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
