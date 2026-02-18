@@ -24,12 +24,23 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executors;
 
-
 public class WebApp {
 
     public static void main(String[] args) throws Exception {
         EnvConfig config = EnvConfig.load();
-        int port = config.getInt("APP_PORT", 8080);
+
+        int port = 8080;
+        String platformPort = System.getenv("PORT");
+        if (platformPort != null && !platformPort.isBlank()) {
+            try {
+                port = Integer.parseInt(platformPort.trim());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid PORT env var: '" + platformPort + "'. Falling back to APP_PORT/8080.");
+                port = config.getInt("APP_PORT", 8080);
+            }
+        } else {
+            port = config.getInt("APP_PORT", 8080);
+        }
 
         // Database connection with fallback
         Database database = null;
@@ -58,7 +69,7 @@ public class WebApp {
 
         // Initialize Services
         SessionService sessionService = new SessionService(userDao);
-        
+
         // Challenge and Submission services (Module D - 中4)
         ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
         // Use real PassportDao/EvidenceDao when DB is available, otherwise mock fallback
@@ -78,14 +89,14 @@ public class WebApp {
         EvidenceService evidenceService = useDb ? new EvidenceService(evidenceDao) : null;
         ValidationService validationService = useDb ? new ValidationService() : null;
         ScoringService scoringService = useDb ? new ScoringService() : null;
-        PassportValidationService passportValidationService = useDb ? 
+        PassportValidationService passportValidationService = useDb ?
                 new PassportValidationService(passportDao, evidenceService, validationService, scoringService) : null;
 
         // Initialize Controllers
         AuthController authController = new AuthController(sessionService);
         ChallengeController challengeController = new ChallengeController(challengeService, submissionService);
         LeaderboardController leaderboardController = new LeaderboardController(leaderboardService);
-        PassportValidationController passportValidationController = useDb ? 
+        PassportValidationController passportValidationController = useDb ?
                 new PassportValidationController(passportValidationService) : null;
 
         // Create server
@@ -94,11 +105,11 @@ public class WebApp {
         // Register contexts
         server.createContext("/", WebApp::handleStatic);
         server.createContext("/api/auth/login", authController::handleLogin);
-        
+
         // Challenge and Leaderboard routes (Module D - 中4)
         server.createContext("/api/challenges", challengeController::handleChallenges);
         server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
-        
+
         // Template, Product and Passport routes (中1, 中2, 中3) - only when DB is available
         if (useDb) {
             server.createContext("/api/templates", new TemplatesHandler(templateService));
