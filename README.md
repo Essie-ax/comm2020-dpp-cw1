@@ -1,3 +1,12 @@
+## Repository Status
+This repository is under active development.
+- Current assessed milestone: **CW1 prototype (v0.1.0)**
+- This README includes project-level setup/planning information.
+- For the exact CW1 assessed reproducible steps and test evidence, refer to the submission documents:
+  - `deployment_guide.pdf`
+  - `testing_evidence.pdf`
+- CW2 scope is in progress and may change the implementation details.
+
 # COMM2020 CW1 Prototype (v0.1.0)
 
 This repo contains the CW1 vertical slice for the Digital Product Passport Builder League.
@@ -46,6 +55,9 @@ curl "http://localhost:8080/api/passports/1"
 - Data dictionary: `docs/data-dictionary.md`
 - Contract change process: `docs/contract-change-process.md`
 
-## Notes
-- Do not change DB schema/API shapes without following the contract change process.
-- Do not commit secrets (use environment variables).
+```bash
+export DB_URL="jdbc:mysql://localhost:3306/comm2020?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+export DB_USER="your_db_user"
+export DB_PASS="your_db_pass"
+mvn clean package
+java -cp target/comm2020-dpp-cw1-0.1.0.jar uk.ac.comm2020.WebApp

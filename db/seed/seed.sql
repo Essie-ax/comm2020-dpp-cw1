@@ -1,8 +1,9 @@
 USE comm2020_dpp;
 
+-- SHA-256 hex hash of "password" (backend uses PasswordUtil.hash("password"))
 INSERT INTO users (username, password_hash, role) VALUES
-('player1', 'HASHED_password', 'PLAYER'),
-('keeper1', 'HASHED_password', 'GAMEKEEPER');
+('player1', '5e884898da2847151d0e56f8dc6292773603d0d6aabbdd62a11ef721d154151d8', 'PLAYER'),
+('gamekeeper1', '5e884898da2847151d0e56f8dc6292773603d0d6aabbdd62a11ef721d154151d8', 'GAMEKEEPER');
 
 INSERT INTO product (name, category, brand, description, passport_version) VALUES
 ('EcoCell A1', 'Battery', 'EcoBrand', 'Demo battery product', 1),
