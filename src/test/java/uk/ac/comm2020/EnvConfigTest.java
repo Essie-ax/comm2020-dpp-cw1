@@ -1,69 +1,71 @@
-package uk.ac.comm2020.config.EnvConfig;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.juipter.api.Test; 
-import org.junit.jupiter.api.Assertions.*;
+import uk.ac.comm2020.config.EnvConfig;
 
-import java.beans.Transient;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-
-
-
-
 
 public class EnvConfigTest {
 
-    // get() -  returns default is the key is missing
-    public void testGetWrithDefaultValue() {
+    // get() - returns default if key is missing
+    @Test
+    public void testGetWithDefaultValue() {
         EnvConfig config = EnvConfig.load();
 
-        String value = config.get("letsHopeThisKeyDoesntExistOrElseUhOh....", "default123");
+        String value = config.get("letsHopeThisKeyDoesntExistOrElseUhOh", "default123");
+
         assertEquals("default123", value);
     }
 
-    // get() - File should load strings
+    // get() - file should load strings
+    @Test
     public void testEnvFileLoadsValues() throws IOException {
-         Path envFile = Path.of(".env");
+        Path envFile = Path.of(".env");
 
         Files.writeString(envFile, "MY_KEY=hello_world");
 
         EnvConfig config = EnvConfig.load();
-        string value = config.get("MY_KEY", "fallback");
+        String value = config.get("MY_KEY", "fallback");
+
         assertEquals("hello_world", value);
 
         Files.deleteIfExists(envFile);
     }
 
-    // require() - Should throw an exception if key is missing
-    public void testRequireThrowsWhenMisssing() {
+    // require() - should throw exception if key missing
+    @Test
+    public void testRequireThrowsWhenMissing() {
         EnvConfig config = EnvConfig.load();
 
         assertThrows(IllegalStateException.class, () -> {
             config.require("missingKey");
         });
     }
-    
+
     // require() - should work when value exists in .env
-     public void testRequireWorksWhenValuePresent() throws IOException {
+    @Test
+    public void testRequireWorksWhenValuePresent() throws IOException {
         Path envFile = Path.of(".env");
 
         Files.writeString(envFile, "REQ_KEY=testValue");
 
         EnvConfig config = EnvConfig.load();
-        string value = config.get("REQ_KEY", "fallback");
+        String value = config.require("REQ_KEY");
+
         assertEquals("testValue", value);
 
         Files.deleteIfExists(envFile);
     }
 
-    // getInt() - returns default is the key is missing
-    public void testGetIntDefaultWheMissing() {
+    // getInt() - returns default if key missing
+    @Test
+    public void testGetIntDefaultWhenMissing() {
         EnvConfig config = EnvConfig.load();
 
         int value = config.getInt("intDoesntExist", 42);
+
         assertEquals(42, value);
     }
 
@@ -76,6 +78,7 @@ public class EnvConfigTest {
 
         EnvConfig config = EnvConfig.load();
         int value = config.getInt("intTest", 0);
+
         assertEquals(123, value);
 
         Files.deleteIfExists(envFile);
