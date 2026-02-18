@@ -1,3 +1,12 @@
+## Repository Status
+This repository is under active development.
+- Current assessed milestone: **CW1 prototype (v0.1.0)**
+- This README includes project-level setup/planning information.
+- For the exact CW1 assessed reproducible steps and test evidence, refer to the submission documents:
+  - `deployment_guide.pdf`
+  - `testing_evidence.pdf`
+- CW2 scope is in progress and may change the implementation details.
+
 # COMM2020 CW1 Prototype (v0.1.0)
 
 This repo contains the CW1 vertical slice for the Digital Product Passport Builder League.
