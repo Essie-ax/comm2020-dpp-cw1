@@ -103,22 +103,24 @@
       <section class="card">
         <div class="row">
           <div>
-            <label for="passportId">Passport ID</label>
-            <input id="passportId" type="number" min="1" placeholder="e.g. 1">
+            <label for="passportIdInput">Passport ID</label>
+            <input id="passportIdInput" type="number" min="1" placeholder="e.g. 1">
           </div>
         </div>
         <div class="row">
           <div>
             <label>&nbsp;</label>
-            <button id="loadPassportBtn">Load Passport</button>
+            // click to load passport by id
+            <button id="loadBtn">Load Passport</button>
           </div>
         </div>
-        <div class="message" id="errorMsg"></div>
-        <pre id="passportResult" style="margin-top:12px;white-space:pre-wrap;"></pre>
+        // show error message here
+        <div class="message" id="loadMessage"></div>
       </section>
 
       <section class="card" id="summaryCard" style="display:none;">
         <div class="section-title">Summary</div>
+        // summary key-value list
         <div class="summary-grid" id="summaryGrid"></div>
       </section>
 
@@ -132,119 +134,80 @@
       </section>
     </div>
 
-    <script src="/js/auth.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const token = localStorage.getItem("token");
-        const role = localStorage.getItem("role");
-        if (!token || role !== "PLAYER") {
-          window.location.href = "/login.html";
+      // cache dom nodes
+      const passportIdInput = document.getElementById("passportIdInput");
+      const loadBtn = document.getElementById("loadBtn");
+      const loadMessage = document.getElementById("loadMessage");
+      const summaryCard = document.getElementById("summaryCard");
+      const detailsCard = document.getElementById("detailsCard");
+      const summaryGrid = document.getElementById("summaryGrid");
+      const requiredList = document.getElementById("requiredList");
+      const optionalList = document.getElementById("optionalList");
+      const otherList = document.getElementById("otherList");
+
+      // support url like ?id=123
+      const params = new URLSearchParams(window.location.search);
+      const initialId = params.get("id");
+
+      // if url has id, fill it
+      if (initialId) {
+        passportIdInput.value = initialId;
+      }
+
+      // auto load when id exists
+      if (initialId) {
+        loadPassport();
+      }
+
+      loadBtn.addEventListener("click", loadPassport);
+
+      // load passport + template, then show ui
+      function loadPassport() {
+        const passportId = passportIdInput.value.trim();
+        if (!passportId) {
+          showMessage("Please enter a passport id.");
           return;
         }
 
-        // cache dom nodes
-        const passportIdInput = document.getElementById("passportId");
-        const loadBtn = document.getElementById("loadPassportBtn");
-        const errorMsg = document.getElementById("errorMsg");
-        const passportResult = document.getElementById("passportResult");
-        const summaryCard = document.getElementById("summaryCard");
-        const detailsCard = document.getElementById("detailsCard");
-        const summaryGrid = document.getElementById("summaryGrid");
-        const requiredList = document.getElementById("requiredList");
-        const optionalList = document.getElementById("optionalList");
-        const otherList = document.getElementById("otherList");
+        // clear old message
+        showMessage("");
 
-        loadBtn.addEventListener("click", onLoadPassport);
-
-        // support url like ?id=123
-        const params = new URLSearchParams(window.location.search);
-        const initialId = params.get("id");
-
-        // if url has id, fill it
-        if (initialId) {
-          passportIdInput.value = initialId;
-        }
-
-        // auto load when id exists
-        if (initialId) {
-          onLoadPassport();
-        }
-
-        // load passport + template, then show ui
-        async function onLoadPassport() {
-          const passportId = passportIdInput.value.trim();
-          console.log("[consumer] onLoadPassport click", { passportId });
-
-          if (!passportId || Number.isNaN(Number(passportId))) {
-            showError("请输入有效的 Passport ID（数字）。");
-            return;
-          }
-
-          clearError();
-          passportResult.textContent = "";
-          summaryCard.style.display = "none";
-          detailsCard.style.display = "none";
-
-          const url = `/api/passports/${passportId}`;
-          const headers = {};
-          if (token) {
-            headers.Authorization = `Bearer ${token}`;
-          }
-
-          try {
-            console.log("[consumer] fetch", url);
-            const res = await fetch(url, { headers });
-            console.log("[consumer] response status", res.status);
-
-            const text = await res.text();
-            let json = null;
-            try {
-              json = text ? JSON.parse(text) : null;
-            } catch (e) {
-              json = null;
+        fetch(`/api/passports/${passportId}`)
+          .then((res) => res.json())
+          .then(async (json) => {
+            if (!json.success) {
+              throw new Error(json.error?.message || "Failed to load passport");
             }
 
-            if (!res.ok) {
-              const msg = json?.error?.message || json?.message || text || `请求失败（${res.status}）`;
-              showError(msg);
-              return;
-            }
+            const passport = json.data;
 
-            const payload = json?.data ?? json ?? {};
-            passportResult.textContent = JSON.stringify(payload, null, 2);
+            // template is for required/optional groups
+            const template = await fetchTemplateById(passport.templateId);
 
-            if (json?.success === true && json?.data) {
-              const passport = json.data;
-              const template = await fetchTemplateById(passport.templateId, token);
-              renderSummary(passport);
-              renderDetails(passport.fields || {}, template);
-            }
-          } catch (err) {
-            console.log("[consumer] fetch error", err);
-            showError("请求失败，请检查网络或后端服务。");
-          }
-        }
+            renderSummary(passport);
+            renderDetails(passport.fields || {}, template);
+          })
+          .catch((err) => {
+            showMessage(err.message);
+            summaryCard.style.display = "none";
+            detailsCard.style.display = "none";
+          });
+      }
 
-        // load template by id, fail then return null
-        async function fetchTemplateById(templateId, authToken) {
-          if (!templateId) {
+      // load template by id, fail then return null
+      async function fetchTemplateById(templateId) {
+        try {
+          const res = await fetch(`/api/templates/${templateId}`);
+          const json = await res.json();
+          if (!json.success) {
             return null;
           }
-          const headers = {};
-          if (authToken) {
-            headers.Authorization = `Bearer ${authToken}`;
-          }
-          try {
-            const res = await fetch(`/api/templates/${templateId}`, { headers });
-            const json = await res.json();
-            if (!res.ok || !json.success) {
-              return null;
-            }
-            return json.data;
-          } catch {
-            return null;
-          }
+          return json.data;
+        } catch {
+          return null;
         }
+      }
 
       // show summary info on top
       function renderSummary(passport) {
@@ -345,21 +308,12 @@
       // show error message box
       function showMessage(message) {
         if (!message) {
-          errorMsg.style.display = "none";
+          loadMessage.style.display = "none";
           return;
         }
-        errorMsg.textContent = message;
-        errorMsg.style.display = "block";
+        loadMessage.textContent = message;
+        loadMessage.style.display = "block";
       }
-
-        function showError(message) {
-          showMessage(message);
-        }
-
-        function clearError() {
-          showMessage("");
-        }
-      });
     </script>
   </body>
 </html>

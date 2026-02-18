@@ -107,6 +107,7 @@
     <div class="container">
       <header>
         <h1>Passport Authoring</h1>
+        // show small status text to user
         <div class="status-line" id="statusLine">Ready.</div>
       </header>
 
@@ -118,6 +119,7 @@
           </div>
           <div>
             <label>&nbsp;</label>
+            // load template + product list
             <button id="loadBtn">Load Templates & Products</button>
           </div>
         </div>
@@ -134,9 +136,11 @@
         <div class="row">
           <div>
             <label>&nbsp;</label>
+            // create a draft passport in backend
             <button id="createPassportBtn" class="secondary">Create Draft Passport</button>
           </div>
         </div>
+        // message box for load/create errors
         <div class="message" id="loadMessage"></div>
       </section>
 
@@ -148,21 +152,16 @@
         <div class="row">
           <div>
             <label>&nbsp;</label>
+            // save form data to backend
             <button id="saveBtn">Save Fields</button>
           </div>
         </div>
+        // message box for save result
         <div class="message" id="saveMessage"></div>
       </section>
     </div>
 
-    <script src="/js/auth.js"></script>
     <script>
-      const token = localStorage.getItem("token");
-      const role = localStorage.getItem("role");
-      if (!token || (role !== "GAME_KEEPER" && role !== "GAMEKEEPER")) {
-        window.location.href = "/login.html";
-      }
-
       // cache dom nodes, so later use easy
       const categoryInput = document.getElementById("categoryInput");
       const loadBtn = document.getElementById("loadBtn");
@@ -197,8 +196,8 @@
 
         // call two apis at same time
         Promise.all([
-          apiFetch(`/api/templates?category=${encodeURIComponent(category)}`),
-          apiFetch(`/api/products?category=${encodeURIComponent(category)}`)
+          fetch(`/api/templates?category=${encodeURIComponent(category)}`),
+          fetch(`/api/products?category=${encodeURIComponent(category)}`)
         ])
           .then(async ([templatesRes, productsRes]) => {
             const templatesJson = await templatesRes.json();
@@ -237,7 +236,7 @@
 
         statusLine.textContent = "Creating draft passport...";
 
-        apiFetch("/api/passports", {
+        fetch("/api/passports", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -278,7 +277,7 @@
         const fields = collectFields();
         statusLine.textContent = "Saving fields...";
 
-        apiFetch(`/api/passports/${currentPassportId}`, {
+        fetch(`/api/passports/${currentPassportId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fields })
