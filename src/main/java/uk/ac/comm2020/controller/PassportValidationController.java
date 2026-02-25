@@ -17,14 +17,13 @@ public class PassportValidationController {
         this.passportValidationService = passportValidationService;
     }
 
-    // POST /api/passports/validate  body: {"passportId":"123"}
     public void handleValidatePassport(HttpExchange ex) throws IOException {
         if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) {
             HttpUtil.sendJson(ex, 405, ApiResponse.error("METHOD_NOT_ALLOWED", "Only POST is allowed"));
             return;
         }
 
-        // optional: require login (same style as TemplateController)
+        // Keep token check here so validation endpoint is not callable anonymously.
         String auth = ex.getRequestHeaders().getFirst("Authorization");
         String token = HttpUtil.extractBearerToken(auth);
         if (token == null || token.isBlank()) {

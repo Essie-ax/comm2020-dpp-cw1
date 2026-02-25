@@ -9,7 +9,7 @@ import java.util.List;
 
 // DAO for evidence table.
 // Only DB read/write here, no business rule.
-public class EvidenceDao {
+public class EvidenceDao implements EvidenceRepository {
 
     private final Database database;
 

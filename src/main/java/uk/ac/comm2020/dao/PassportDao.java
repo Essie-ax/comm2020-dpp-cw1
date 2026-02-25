@@ -11,7 +11,7 @@ import java.util.Optional;
 
 // DAO for passport table.
 // Only do DB read/write here, no business rule.
-public class PassportDao {
+public class PassportDao implements PassportRepository {
     private final Database database;
 
     // keep db helper here

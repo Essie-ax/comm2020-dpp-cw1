@@ -42,81 +42,69 @@ public class WebApp {
             port = config.getInt("APP_PORT", 8080);
         }
 
-        // Database connection with fallback
+        // Default to in-memory to avoid local DB dependency during CW2 development.
         Database database = null;
-        boolean useDb = Db.hasUrl() && Db.tryConnection();
+        boolean useDb = "true".equalsIgnoreCase(Db.getEnv("USE_DB")) && Db.hasUrl() && Db.tryConnection();
         if (useDb) {
             database = new Database(config);
             System.out.println("Using MySQL (DB connected)");
         } else {
-            if (Db.hasUrl()) {
-                System.out.println("DB_URL set but connection failed -> Using In-memory DAOs. Start MySQL or remove .env to avoid this message.");
+            if ("true".equalsIgnoreCase(Db.getEnv("USE_DB")) && Db.hasUrl()) {
+                System.out.println("USE_DB=true but DB connection failed -> Using In-memory DAOs.");
             } else {
-                System.out.println("Using In-memory DAOs (no DB_URL)");
+                System.out.println("Using In-memory DAOs (default mode)");
             }
         }
 
-        // Initialize DAOs
         UserDao userDao = useDb ? new MySqlUserDao() : new InMemoryUserDao();
         ChallengeDao challengeDao = useDb ? new MySqlChallengeDao() : new InMemoryChallengeDao();
         SubmissionDao submissionDao = useDb ? new MySqlSubmissionDao() : new InMemorySubmissionDao();
 
-        // DAOs from main branch (require database)
         TemplateDao templateDao = useDb ? new TemplateDao(database) : null;
         ProductDao productDao = useDb ? new ProductDao(database) : null;
-        PassportDao passportDao = useDb ? new PassportDao(database) : null;
-        EvidenceDao evidenceDao = useDb ? new EvidenceDao(database) : null;
+        PassportRepository passportRepo = useDb ? new PassportDao(database) : new InMemoryPassportDao();
+        EvidenceRepository evidenceRepo = useDb ? new EvidenceDao(database) : new InMemoryEvidenceDao();
 
-        // Initialize Services
         SessionService sessionService = new SessionService(userDao);
 
-        // Challenge and Submission services (Module D - 中4)
         ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
-        // Use real PassportDao/EvidenceDao when DB is available, otherwise mock fallback
         SubmissionService submissionService = useDb
-                ? new SubmissionService(submissionDao, challengeDao, sessionService, passportDao, evidenceDao)
+                ? new SubmissionService(submissionDao, challengeDao, sessionService, (PassportDao) passportRepo, (EvidenceDao) evidenceRepo)
                 : new SubmissionService(submissionDao, challengeDao, sessionService);
         LeaderboardService leaderboardService = new LeaderboardService(submissionDao);
 
-        // Template service (中1)
         TemplateService templateService = useDb ? new TemplateService(templateDao) : null;
-
-        // Product and Passport services (中1, 中2)
         ProductService productService = useDb ? new ProductService(productDao) : null;
-        PassportService passportService = useDb ? new PassportService(passportDao, templateDao, productDao) : null;
+        PassportService passportService = useDb ? new PassportService((PassportDao) passportRepo, templateDao, productDao) : null;
 
-        // Validation and Evidence services (中3)
-        EvidenceService evidenceService = useDb ? new EvidenceService(evidenceDao) : null;
-        ValidationService validationService = useDb ? new ValidationService() : null;
-        ScoringService scoringService = useDb ? new ScoringService() : null;
-        PassportValidationService passportValidationService = useDb ?
-                new PassportValidationService(passportDao, evidenceService, validationService, scoringService) : null;
+        EvidenceService evidenceService = new EvidenceService(evidenceRepo);
+        ValidationService validationService = new ValidationService();
+        ScoringService scoringService = new ScoringService();
+        PassportValidationService passportValidationService =
+                new PassportValidationService(passportRepo, evidenceService, validationService, scoringService);
 
-        // Initialize Controllers
         AuthController authController = new AuthController(sessionService);
         ChallengeController challengeController = new ChallengeController(challengeService, submissionService);
         LeaderboardController leaderboardController = new LeaderboardController(leaderboardService);
-        PassportValidationController passportValidationController = useDb ?
-                new PassportValidationController(passportValidationService) : null;
+        PassportValidationController passportValidationController =
+                new PassportValidationController(passportValidationService);
 
-        // Create server
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
-        // Register contexts
         server.createContext("/", WebApp::handleStatic);
         server.createContext("/api/auth/login", authController::handleLogin);
 
-        // Challenge and Leaderboard routes (Module D - 中4)
         server.createContext("/api/challenges", challengeController::handleChallenges);
         server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
 
-        // Template, Product and Passport routes (中1, 中2, 中3) - only when DB is available
+        server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
+
+        // These handlers depend on real DB DAOs, so keep them disabled in in-memory mode.
         if (useDb) {
             server.createContext("/api/templates", new TemplatesHandler(templateService));
             server.createContext("/api/templates/", new TemplateByIdHandler(templateService));
             server.createContext("/api/products", new ProductsHandler(productService));
             server.createContext("/api/passports", new PassportsHandler(passportService));
-            server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
         }
 
         server.setExecutor(Executors.newFixedThreadPool(10));
