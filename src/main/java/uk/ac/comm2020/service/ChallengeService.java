@@ -41,16 +41,20 @@ public class ChallengeService {
             return ApiResponse.error("BAD_REQUEST", "startDate and endDate are required");
         }
 
-        // Build constraints JSON from flat fields (simplified for CW1)
         String minComp = body.getOrDefault("minCompleteness", "0.8");
+        String reqFields = body.getOrDefault("requiredFields", "name,brand,origin");
         String reqTypes = body.getOrDefault("requiredEvidenceTypes", "CERTIFICATE");
-        String constraintsJson = "{\"minCompleteness\":" + minComp
-                + ",\"requiredEvidenceTypes\":[\"" + reqTypes + "\"]}";
 
-        // Build scoring rules JSON
+        String constraintsJson = "{\"minCompleteness\":" + minComp
+                + ",\"requiredFields\":" + toJsonArray(reqFields)
+                + ",\"requiredEvidenceTypes\":" + toJsonArray(reqTypes) + "}";
+
         String baseScore = body.getOrDefault("baseScore", "100");
-        String bonus = body.getOrDefault("bonusEvidence", "20");
-        String scoringJson = "{\"base\":" + baseScore + ",\"bonusEvidence\":" + bonus + "}";
+        String bonusEvidence = body.getOrDefault("bonusEvidence", "20");
+        String bonusAllFields = body.getOrDefault("bonusAllFields", "10");
+        String scoringJson = "{\"base\":" + baseScore
+                + ",\"bonusEvidence\":" + bonusEvidence
+                + ",\"bonusAllFields\":" + bonusAllFields + "}";
 
         long id = challengeDao.createChallenge(title, category, constraintsJson, scoringJson,
                 startDate, endDate, session.userId);
@@ -79,5 +83,18 @@ public class ChallengeService {
             return ApiResponse.error("NOT_FOUND", "Challenge not found: " + id);
         }
         return ApiResponse.ok(challenge);
+    }
+
+    // Turn a comma-separated string like "name,brand" into ["name","brand"].
+    private String toJsonArray(String csv) {
+        if (csv == null || csv.isBlank()) return "[]";
+        String[] parts = csv.split(",");
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(parts[i].trim()).append("\"");
+        }
+        sb.append("]");
+        return sb.toString();
     }
 }

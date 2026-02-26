@@ -122,12 +122,7 @@ function showResult(data) {
     outcomeEl.innerHTML = '<span class="badge-fail">FAIL</span>';
   }
 
-  var sourceEl = document.getElementById("resSource");
-  if (data.dataSource === "real") {
-    sourceEl.innerHTML = '<span class="badge-real">Real Data</span>';
-  } else {
-    sourceEl.innerHTML = '<span class="badge-mock">Mock Data</span>';
-  }
+  document.getElementById("resSource").innerHTML = "";
 
   document.getElementById("resChallengeId").textContent = data.challengeId;
   document.getElementById("resPassportId").textContent = data.passportId;
@@ -151,14 +146,12 @@ function renderHistory() {
   var tbody = document.getElementById("historyList");
   tbody.innerHTML = submissions.map(function (s, i) {
     var outcomeCls = s.outcome === "PASS" ? "badge-pass" : "badge-fail";
-    var sourceCls = s.dataSource === "real" ? "badge-real" : "badge-mock";
     return '<tr>' +
       '<td>' + (i + 1) + '</td>' +
       '<td>' + esc(String(s.challengeId)) + '</td>' +
       '<td>' + esc(String(s.passportId)) + '</td>' +
       '<td><strong>' + s.score + '</strong></td>' +
       '<td><span class="' + outcomeCls + '">' + esc(s.outcome) + '</span></td>' +
-      '<td><span class="' + sourceCls + '">' + esc(s.dataSource || "unknown") + '</span></td>' +
       '</tr>';
   }).join("");
 }

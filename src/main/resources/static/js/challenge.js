@@ -88,7 +88,10 @@ async function handleCreateChallenge() {
     category: $("category").value,
     startDate: $("startDate").value,
     endDate: $("endDate").value,
-    minCompleteness: String(parseInt($("minCompleteness").value, 10) / 100)
+    minCompleteness: String(parseInt($("minCompleteness").value, 10) / 100),
+    requiredFields: $("requiredFields").value.trim(),
+    requiredEvidenceTypes: $("reqEvTypes").value.trim(),
+    bonusAllFields: $("bonusAllFields").value.trim()
   };
 
   try {
@@ -129,14 +132,19 @@ async function loadChallengeDetail(id) {
 
     if (json.success) {
       const c = json.data;
+      const cons = safeParseJson(c.constraints);
+      const rules = safeParseJson(c.scoringRules);
       $("detailSection").innerHTML =
         "<p><strong>ID:</strong> " + c.challengeId + "</p>" +
         "<p><strong>Title:</strong> " + esc(c.title) + "</p>" +
         "<p><strong>Category:</strong> " + esc(c.category) + "</p>" +
         "<p><strong>Start Date:</strong> " + esc(c.startDate) + "</p>" +
         "<p><strong>End Date:</strong> " + esc(c.endDate) + "</p>" +
-        "<p><strong>Constraints:</strong> " + esc(c.constraints) + "</p>" +
-        "<p><strong>Scoring Rules:</strong> " + esc(c.scoringRules) + "</p>" +
+        "<p><strong>Min Completeness:</strong> " + ((cons.minCompleteness || 0.8) * 100) + "%</p>" +
+        "<p><strong>Required Fields:</strong> " + esc((cons.requiredFields || []).join(", ") || "none") + "</p>" +
+        "<p><strong>Required Evidence:</strong> " + esc((cons.requiredEvidenceTypes || []).join(", ") || "none") + "</p>" +
+        "<p><strong>Base Score:</strong> " + (rules.base || 100) + "</p>" +
+        "<p><strong>Bonus (all fields):</strong> +" + (rules.bonusAllFields || 0) + " pts</p>" +
         "<p><strong>Created By (userId):</strong> " + c.createdBy + "</p>" +
         "<p><strong>Created At:</strong> " + esc(c.createdAt) + "</p>";
     } else {
@@ -153,6 +161,9 @@ function resetForm() {
   $("startDate").value = "";
   $("endDate").value = "";
   $("minCompleteness").value = "80";
+  $("requiredFields").value = "name,brand,origin";
+  $("reqEvTypes").value = "CERTIFICATE";
+  $("bonusAllFields").value = "10";
   $("category").selectedIndex = 0;
 }
 
@@ -160,6 +171,10 @@ function resetForm() {
 function esc(str) {
   if (str == null) return "";
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function safeParseJson(str) {
+  try { return JSON.parse(str); } catch (e) { return {}; }
 }
 
 // Event listeners

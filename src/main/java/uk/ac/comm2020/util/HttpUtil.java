@@ -5,7 +5,9 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class HttpUtil {
@@ -38,14 +40,42 @@ public class HttpUtil {
         s = s.substring(1, s.length() - 1).trim();
         if (s.isEmpty()) return map;
 
-        String[] parts = s.split(",");
+        // Split by commas that are NOT inside double-quotes.
+        List<String> parts = splitRespectingQuotes(s);
         for (String part : parts) {
-            String[] kv = part.split(":", 2);
-            if (kv.length == 2) {
-                map.put(stripQuotes(kv[0].trim()), stripQuotes(kv[1].trim()));
-            }
+            int colon = findColonOutsideQuotes(part);
+            if (colon < 0) continue;
+            String key = stripQuotes(part.substring(0, colon).trim());
+            String val = stripQuotes(part.substring(colon + 1).trim());
+            map.put(key, val);
         }
         return map;
+    }
+
+    private static List<String> splitRespectingQuotes(String s) {
+        List<String> result = new ArrayList<>();
+        boolean inQuotes = false;
+        int start = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '"') inQuotes = !inQuotes;
+            if (c == ',' && !inQuotes) {
+                result.add(s.substring(start, i));
+                start = i + 1;
+            }
+        }
+        if (start < s.length()) result.add(s.substring(start));
+        return result;
+    }
+
+    private static int findColonOutsideQuotes(String s) {
+        boolean inQuotes = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '"') inQuotes = !inQuotes;
+            if (c == ':' && !inQuotes) return i;
+        }
+        return -1;
     }
 
     private static String stripQuotes(String s) {
