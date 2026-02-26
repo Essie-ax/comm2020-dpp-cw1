@@ -65,6 +65,22 @@ public class MySqlSubmissionDao implements SubmissionDao {
         return list;
     }
 
+    @Override
+    public List<Map<String, Object>> getAllSubmissions() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT * FROM submission ORDER BY submitted_at DESC LIMIT 1000";
+        try (Connection c = Db.getConnection()) {
+            if (c == null) return list;
+            try (PreparedStatement ps = c.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(rowToMap(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("getAllSubmissions error: " + e.getMessage());
+        }
+        return list;
+    }
+
     private Map<String, Object> rowToMap(ResultSet rs) throws SQLException {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("submissionId", rs.getLong("submission_id"));
