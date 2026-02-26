@@ -70,9 +70,8 @@ public class WebApp {
         SessionService sessionService = new SessionService(userDao);
 
         ChallengeService challengeService = new ChallengeService(challengeDao, sessionService);
-        SubmissionService submissionService = useDb
-                ? new SubmissionService(submissionDao, challengeDao, sessionService, (PassportDao) passportRepo, (EvidenceDao) evidenceRepo)
-                : new SubmissionService(submissionDao, challengeDao, sessionService);
+        SubmissionService submissionService = new SubmissionService(
+                submissionDao, challengeDao, sessionService, passportRepo, evidenceRepo);
         LeaderboardService leaderboardService = new LeaderboardService(submissionDao);
 
         TemplateService templateService = useDb ? new TemplateService(templateDao) : null;

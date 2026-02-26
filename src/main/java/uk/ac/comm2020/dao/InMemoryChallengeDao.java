@@ -11,13 +11,14 @@ public class InMemoryChallengeDao implements ChallengeDao {
     private final AtomicLong idGen = new AtomicLong(1);
 
     public InMemoryChallengeDao() {
-        // seed one demo challenge (matches seed.sql)
         Map<String, Object> demo = new LinkedHashMap<>();
         demo.put("challengeId", 1L);
         demo.put("title", "Battery Compliance Sprint");
         demo.put("category", "Battery");
-        demo.put("constraints", "{\"minCompleteness\":0.8,\"requiredEvidenceTypes\":[\"CERTIFICATE\"]}");
-        demo.put("scoringRules", "{\"base\":100,\"bonusEvidence\":20}");
+        demo.put("constraints", "{\"minCompleteness\":0.8"
+                + ",\"requiredFields\":[\"name\",\"brand\",\"origin\",\"chemistry\"]"
+                + ",\"requiredEvidenceTypes\":[\"CERTIFICATE\"]}");
+        demo.put("scoringRules", "{\"base\":100,\"bonusEvidence\":20,\"bonusAllFields\":10}");
         demo.put("startDate", "2026-02-01");
         demo.put("endDate", "2026-03-01");
         demo.put("createdBy", 2L);
