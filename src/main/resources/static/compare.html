@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Compare Passports</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0 0 4px;
+      }
+      .nav {
+        margin-bottom: 14px;
+        font-size: 0.9rem;
+      }
+      .nav a {
+        color: #6366f1;
+        text-decoration: none;
+        margin-right: 14px;
+      }
+      .nav a:hover {
+        text-decoration: underline;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid rgba(99, 102, 241, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 12px 32px rgba(148, 163, 184, 0.2);
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin: 10px 0 6px;
+      }
+      input, button {
+        width: 100%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        background: #ffffff;
+        color: #1f2937;
+      }
+      button {
+        background: #7da4ff;
+        border: none;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2);
+      }
+      button:hover {
+        background: #6366f1;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+      }
+      .message {
+        margin-top: 12px;
+        padding: 10px;
+        border-radius: 6px;
+        background: #ffe4e7;
+        color: #9f1239;
+        display: none;
+      }
+      .section-title {
+        margin: 0 0 12px;
+        font-weight: 700;
+        color: #475569;
+      }
+      /* score comparison */
+      .score-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 12px;
+      }
+      .score-box {
+        text-align: center;
+        padding: 12px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+      .score-label {
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-bottom: 6px;
+      }
+      .score-val {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1e293b;
+      }
+      .score-diff {
+        font-size: 0.82rem;
+        margin-top: 4px;
+      }
+      .diff-pos { color: #16a34a; }
+      .diff-neg { color: #dc2626; }
+      .diff-zero { color: #64748b; }
+      /* field comparison table */
+      .compare-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .compare-table th {
+        background: #f1f5f9;
+        font-weight: 600;
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 0.9rem;
+      }
+      .compare-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 0.88rem;
+        vertical-align: top;
+      }
+      /* yellow highlight for mismatches, light green for matches */
+      .compare-table tr.row-diff td {
+        background: #fef9c3;
+      }
+      .compare-table tr.row-same td {
+        background: #f0fdf4;
+      }
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .tag-same { background: #dcfce7; color: #166534; }
+      .tag-diff { background: #fde68a; color: #92400e; }
+      .diff-summary {
+        font-size: 0.9rem;
+        color: #475569;
+        margin-bottom: 12px;
+      }
+      @media (max-width: 700px) {
+        .score-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Compare Passports</h1>
+      <div class="nav">
+        <a href="/consumer.html">Consumer View</a>
+        <a href="/player.html">Player Dashboard</a>
+        <a href="/login.html" id="logoutLink">Logout</a>
+      </div>
+
+      <!-- Input card -->
+      <section class="card">
+        <div class="row">
+          <div>
+            <label for="id1">Passport ID 1</label>
+            <input id="id1" type="number" min="1" placeholder="e.g. 1">
+          </div>
+          <div>
+            <label for="id2">Passport ID 2</label>
+            <input id="id2" type="number" min="1" placeholder="e.g. 2">
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button id="compareBtn">Compare</button>
+          </div>
+        </div>
+        <div class="message" id="errorMsg"></div>
+      </section>
+
+      <!-- Results (hidden until compare runs) -->
+      <div id="resultSection" style="display:none;">
+
+        <!-- Score cards -->
+        <section class="card">
+          <div class="section-title">Score Comparison</div>
+          <div class="score-grid">
+            <div class="score-box">
+              <div class="score-label">Passport 1 &mdash; Completeness</div>
+              <div class="score-val" id="sc1c">—</div>
+            </div>
+            <div class="score-box">
+              <div class="score-label">Passport 2 &mdash; Completeness</div>
+              <div class="score-val" id="sc2c">—</div>
+              <div class="score-diff" id="scDiffC"></div>
+            </div>
+            <div class="score-box">
+              <div class="score-label">Passport 1 &mdash; Confidence</div>
+              <div class="score-val" id="sc1conf">—</div>
+            </div>
+            <div class="score-box">
+              <div class="score-label">Passport 2 &mdash; Confidence</div>
+              <div class="score-val" id="sc2conf">—</div>
+              <div class="score-diff" id="scDiffConf"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Field-by-field table -->
+        <section class="card">
+          <div class="section-title">Field Comparison</div>
+          <div class="diff-summary" id="diffSummary"></div>
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Passport 1</th>
+                <th>Passport 2</th>
+                <th>Match</th>
+              </tr>
+            </thead>
+            <tbody id="fieldTable"></tbody>
+          </table>
+        </section>
+
+      </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          window.location.href = "/login.html";
+          return;
+        }
+
+        const id1Input = document.getElementById("id1");
+        const id2Input = document.getElementById("id2");
+        const compareBtn = document.getElementById("compareBtn");
+        const errorMsg = document.getElementById("errorMsg");
+        const resultSection = document.getElementById("resultSection");
+
+        // Pre-fill from URL params like ?id1=1&id2=2
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("id1")) id1Input.value = params.get("id1");
+        if (params.get("id2")) id2Input.value = params.get("id2");
+
+        // Auto-run if both ids are in URL
+        if (params.get("id1") && params.get("id2")) {
+          runCompare();
+        }
+
+        compareBtn.addEventListener("click", runCompare);
+
+        async function runCompare() {
+          const id1 = id1Input.value.trim();
+          const id2 = id2Input.value.trim();
+
+          if (!id1 || !id2 || isNaN(Number(id1)) || isNaN(Number(id2))) {
+            showError("Please enter valid numeric IDs for both passports.");
+            return;
+          }
+          if (id1 === id2) {
+            showError("Please enter two different passport IDs.");
+            return;
+          }
+
+          clearError();
+          resultSection.style.display = "none";
+
+          try {
+            const res = await fetch(`/api/passports/compare?id1=${id1}&id2=${id2}`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+              showError(json?.error?.message || `Request failed (${res.status})`);
+              return;
+            }
+
+            renderResults(json.data);
+          } catch (err) {
+            showError("Request failed. Check the server is running.");
+          }
+        }
+
+        function renderResults(data) {
+          const { passport1, passport2, fieldDiffs, scoreDiff } = data;
+
+          // Score cards
+          document.getElementById("sc1c").textContent = passport1.completenessScore;
+          document.getElementById("sc2c").textContent = passport2.completenessScore;
+          document.getElementById("sc1conf").textContent = passport1.confidenceScore;
+          document.getElementById("sc2conf").textContent = passport2.confidenceScore;
+
+          renderScoreDiff("scDiffC", scoreDiff.completeness.diff);
+          renderScoreDiff("scDiffConf", scoreDiff.confidence.diff);
+
+          // Field table
+          const tbody = document.getElementById("fieldTable");
+          tbody.innerHTML = "";
+
+          let diffCount = 0;
+          fieldDiffs.forEach((row) => {
+            if (!row.match) diffCount++;
+
+            const tr = document.createElement("tr");
+            tr.className = row.match ? "row-same" : "row-diff";
+
+            const v1 = row.value1 !== null ? row.value1 : "—";
+            const v2 = row.value2 !== null ? row.value2 : "—";
+
+            tr.innerHTML = `
+              <td><strong>${row.key}</strong></td>
+              <td>${v1}</td>
+              <td>${v2}</td>
+              <td><span class="tag ${row.match ? 'tag-same' : 'tag-diff'}">${row.match ? "Same" : "Different"}</span></td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          const total = fieldDiffs.length;
+          document.getElementById("diffSummary").textContent =
+            `${diffCount} field(s) differ out of ${total} total fields.`;
+
+          resultSection.style.display = "block";
+        }
+
+        // Shows +X / -X / no change label under the second score box.
+        function renderScoreDiff(elementId, diff) {
+          const el = document.getElementById(elementId);
+          if (diff > 0) {
+            el.textContent = `+${diff} vs Passport 1`;
+            el.className = "score-diff diff-pos";
+          } else if (diff < 0) {
+            el.textContent = `${diff} vs Passport 1`;
+            el.className = "score-diff diff-neg";
+          } else {
+            el.textContent = "Same as Passport 1";
+            el.className = "score-diff diff-zero";
+          }
+        }
+
+        function showError(msg) {
+          errorMsg.textContent = msg;
+          errorMsg.style.display = "block";
+        }
+
+        function clearError() {
+          errorMsg.textContent = "";
+          errorMsg.style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>

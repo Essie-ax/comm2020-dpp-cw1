@@ -114,7 +114,17 @@
           </div>
         </div>
         <div class="message" id="errorMsg"></div>
-        <pre id="passportResult" style="margin-top:12px;white-space:pre-wrap;"></pre>
+      </section>
+
+      <section class="card" id="compareCard" style="display:none;">
+        <div class="section-title">Actions</div>
+        <div class="row">
+          <div>
+            <a id="compareLink" href="/compare.html" style="display:inline-block;padding:10px 16px;background:#7da4ff;color:#fff;border-radius:6px;font-weight:600;text-decoration:none;box-shadow:0 8px 20px rgba(99,102,241,.2);">
+              Compare with Another Passport
+            </a>
+          </div>
+        </div>
       </section>
 
       <section class="card" id="summaryCard" style="display:none;">
@@ -123,12 +133,20 @@
       </section>
 
       <section class="card" id="detailsCard" style="display:none;">
-        <div class="section-title">Required Fields</div>
-        <div class="field-list" id="requiredList"></div>
-        <div class="section-title" style="margin-top:14px;">Optional Fields</div>
-        <div class="field-list" id="optionalList"></div>
-        <div class="section-title" style="margin-top:14px;">Other Fields</div>
-        <div class="field-list" id="otherList"></div>
+        <!-- When template is available (DB mode), three sections appear.
+             In-memory mode has no template endpoint so we fall back to a single "All Fields" section. -->
+        <div id="templateSections" style="display:none;">
+          <div class="section-title">Required Fields</div>
+          <div class="field-list" id="requiredList"></div>
+          <div class="section-title" style="margin-top:14px;">Optional Fields</div>
+          <div class="field-list" id="optionalList"></div>
+          <div class="section-title" style="margin-top:14px;">Other Fields</div>
+          <div class="field-list" id="otherList"></div>
+        </div>
+        <div id="allFieldsSection" style="display:none;">
+          <div class="section-title">All Fields</div>
+          <div class="field-list" id="allFieldsList"></div>
+        </div>
       </section>
     </div>
 
@@ -146,13 +164,17 @@
         const passportIdInput = document.getElementById("passportId");
         const loadBtn = document.getElementById("loadPassportBtn");
         const errorMsg = document.getElementById("errorMsg");
-        const passportResult = document.getElementById("passportResult");
+        const compareCard = document.getElementById("compareCard");
+        const compareLink = document.getElementById("compareLink");
         const summaryCard = document.getElementById("summaryCard");
         const detailsCard = document.getElementById("detailsCard");
         const summaryGrid = document.getElementById("summaryGrid");
+        const templateSections = document.getElementById("templateSections");
         const requiredList = document.getElementById("requiredList");
         const optionalList = document.getElementById("optionalList");
         const otherList = document.getElementById("otherList");
+        const allFieldsSection = document.getElementById("allFieldsSection");
+        const allFieldsList = document.getElementById("allFieldsList");
 
         loadBtn.addEventListener("click", onLoadPassport);
 
@@ -181,7 +203,7 @@
           }
 
           clearError();
-          passportResult.textContent = "";
+          compareCard.style.display = "none";
           summaryCard.style.display = "none";
           detailsCard.style.display = "none";
 
@@ -210,14 +232,14 @@
               return;
             }
 
-            const payload = json?.data ?? json ?? {};
-            passportResult.textContent = JSON.stringify(payload, null, 2);
-
             if (json?.success === true && json?.data) {
               const passport = json.data;
               const template = await fetchTemplateById(passport.templateId, token);
               renderSummary(passport);
               renderDetails(passport.fields || {}, template);
+              // Show compare button with current passport pre-filled as id1.
+              compareLink.href = `/compare.html?id1=${passport.passportId}`;
+              compareCard.style.display = "block";
             }
           } catch (err) {
             console.log("[consumer] fetch error", err);
@@ -279,14 +301,33 @@
         summaryCard.style.display = "block";
       }
 
-      // split fields into required / optional / other
+      // Split fields into required / optional / other when template is available.
+      // Falls back to a single "All Fields" list when no template (in-memory mode).
+      // Switching to real DB automatically enables the three-section view.
       function renderDetails(fields, template) {
+        if (!template) {
+          templateSections.style.display = "none";
+          allFieldsSection.style.display = "block";
+          allFieldsList.innerHTML = "";
+          Object.keys(fields || {}).forEach((key) => {
+            allFieldsList.appendChild(makeFieldItem(key, fields[key]));
+          });
+          if (!allFieldsList.children.length) {
+            allFieldsList.appendChild(makeFieldItem("(none)", ""));
+          }
+          detailsCard.style.display = "block";
+          return;
+        }
+
+        allFieldsSection.style.display = "none";
+        templateSections.style.display = "block";
+
         requiredList.innerHTML = "";
         optionalList.innerHTML = "";
         otherList.innerHTML = "";
 
-        const requiredFields = template?.requiredFields || [];
-        const optionalFields = template?.optionalFields || [];
+        const requiredFields = template.requiredFields || [];
+        const optionalFields = template.optionalFields || [];
         const usedKeys = new Set();
 
         requiredFields.forEach((key) => {
@@ -299,23 +340,15 @@
           optionalList.appendChild(makeFieldItem(key, fields[key]));
         });
 
-        // any key not in template -> put to other
         Object.keys(fields || {}).forEach((key) => {
           if (!usedKeys.has(key)) {
             otherList.appendChild(makeFieldItem(key, fields[key]));
           }
         });
 
-        // if empty, show (none)
-        if (!requiredList.children.length) {
-          requiredList.appendChild(makeFieldItem("(none)", ""));
-        }
-        if (!optionalList.children.length) {
-          optionalList.appendChild(makeFieldItem("(none)", ""));
-        }
-        if (!otherList.children.length) {
-          otherList.appendChild(makeFieldItem("(none)", ""));
-        }
+        if (!requiredList.children.length) requiredList.appendChild(makeFieldItem("(none)", ""));
+        if (!optionalList.children.length) optionalList.appendChild(makeFieldItem("(none)", ""));
+        if (!otherList.children.length) otherList.appendChild(makeFieldItem("(none)", ""));
 
         detailsCard.style.display = "block";
       }

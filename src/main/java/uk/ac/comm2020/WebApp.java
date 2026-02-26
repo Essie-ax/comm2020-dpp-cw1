@@ -10,7 +10,9 @@ import uk.ac.comm2020.api.TemplatesHandler;
 import uk.ac.comm2020.config.EnvConfig;
 import uk.ac.comm2020.controller.AuthController;
 import uk.ac.comm2020.controller.ChallengeController;
+import uk.ac.comm2020.controller.ComparisonController;
 import uk.ac.comm2020.controller.LeaderboardController;
+import uk.ac.comm2020.controller.PassportReadController;
 import uk.ac.comm2020.controller.PassportValidationController;
 import uk.ac.comm2020.dao.*;
 import uk.ac.comm2020.db.Database;
@@ -89,6 +91,10 @@ public class WebApp {
         PassportValidationController passportValidationController =
                 new PassportValidationController(passportValidationService);
 
+        ComparisonService comparisonService = new ComparisonService(passportRepo);
+        ComparisonController comparisonController = new ComparisonController(comparisonService);
+        PassportReadController passportReadController = new PassportReadController(passportRepo);
+
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
         server.createContext("/", WebApp::handleStatic);
@@ -98,6 +104,12 @@ public class WebApp {
         server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
 
         server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
+        server.createContext("/api/passports/compare", comparisonController::handleCompare);
+
+        // Without DB the PassportsHandler isn't registered, so we need our own read endpoint.
+        if (!useDb) {
+            server.createContext("/api/passports/", passportReadController::handleGetById);
+        }
 
         // These handlers depend on real DB DAOs, so keep them disabled in in-memory mode.
         if (useDb) {
