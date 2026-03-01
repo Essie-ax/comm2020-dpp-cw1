@@ -1,46 +1,55 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Player - Challenge Submission</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 850px; margin: 20px auto; padding: 0 16px; background: #fafafa; }
     h2 { color: #2c3e50; }
     h3 { margin-top: 24px; color: #34495e; }
-    nav { margin-bottom: 16px; }
+    nav { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 4px; }
     nav a { color: #3498db; margin-right: 14px; text-decoration: none; }
     nav a:hover { text-decoration: underline; }
-    input, select { padding: 8px 12px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 240px; font-size: 14px; }
-    button { padding: 8px 20px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-size: 14px; }
+    nav a:focus-visible { outline: 2px solid #3498db; outline-offset: 2px; border-radius: 2px; }
+    input, select { padding: 8px 12px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 240px; font-size: 14px; min-height: 38px; }
+    input:focus-visible, select:focus-visible { outline: 2px solid #3498db; outline-offset: 1px; }
+    button { padding: 8px 20px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-size: 14px; min-height: 44px; }
+    button:focus-visible { outline: 2px solid #2980b9; outline-offset: 2px; }
     .btn-primary { background: #3498db; }
     .btn-primary:hover { background: #2980b9; }
     .btn-success { background: #27ae60; }
     .btn-success:hover { background: #219a52; }
     .msg-ok { color: #27ae60; margin: 8px 0; font-weight: bold; }
     .msg-err { color: #e74c3c; margin: 8px 0; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 400px; }
     th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 14px; }
     th { background: #ecf0f1; }
     .result-box { background: #fff; border: 1px solid #ddd; padding: 20px; margin-top: 12px; border-radius: 6px; }
     .result-box h4 { margin-top: 0; }
     .badge-pass { display: inline-block; padding: 4px 14px; background: #27ae60; color: #fff; border-radius: 12px; font-weight: bold; }
     .badge-fail { display: inline-block; padding: 4px 14px; background: #e74c3c; color: #fff; border-radius: 12px; font-weight: bold; }
-    .badge-real { display: inline-block; padding: 2px 8px; background: #3498db; color: #fff; border-radius: 8px; font-size: 12px; }
-    .badge-mock { display: inline-block; padding: 2px 8px; background: #95a5a6; color: #fff; border-radius: 8px; font-size: 12px; }
     .score-big { font-size: 36px; font-weight: bold; color: #2c3e50; }
     .feedback-list { list-style: none; padding: 0; margin: 8px 0; }
     .feedback-list li { padding: 4px 0; color: #555; }
     .feedback-list li::before { content: "→ "; color: #3498db; }
     #info { color: #7f8c8d; font-size: 13px; }
     hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
-    .form-row { margin: 10px 0; }
-    .form-row label { display: inline-block; width: 130px; font-size: 14px; font-weight: bold; }
+    .form-row { margin: 10px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .form-row label { width: 130px; font-size: 14px; font-weight: bold; flex-shrink: 0; }
     .hidden { display: none; }
+    @media (max-width: 480px) {
+      .form-row { flex-direction: column; align-items: flex-start; }
+      .form-row label { width: auto; }
+      input, select { width: 100%; }
+    }
   </style>
 </head>
 <body>
   <h2>Player Dashboard</h2>
   <p id="info"></p>
-  <nav>
+  <nav aria-label="Site navigation">
     <a href="/leaderboard.html">View Leaderboard</a>
     <a href="/compare.html">Compare Passports</a>
     <a href="/analytics.html">Analytics</a>
@@ -51,13 +60,18 @@
 
   <!-- Available Challenges -->
   <h3>Available Challenges</h3>
-  <div id="challengeMsg"></div>
-  <table>
+  <div id="challengeMsg" aria-live="polite"></div>
+  <div class="table-wrap">
+  <table aria-label="Available challenges">
     <thead>
-      <tr><th>ID</th><th>Title</th><th>Category</th><th>Start</th><th>End</th><th>Action</th></tr>
+      <tr>
+        <th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th>
+        <th scope="col">Start</th><th scope="col">End</th><th scope="col">Action</th>
+      </tr>
     </thead>
     <tbody id="challengeList"></tbody>
   </table>
+  </div>
 
   <hr>
 
@@ -75,7 +89,7 @@
     <div style="margin-top: 12px;">
       <button class="btn-success" id="submitBtn">Submit Passport</button>
     </div>
-    <div id="submitMsg"></div>
+    <div id="submitMsg" aria-live="polite"></div>
   </div>
 
   <!-- Submission Result -->
@@ -95,12 +109,17 @@
 
   <!-- Submission History -->
   <h3>My Recent Submissions</h3>
-  <table>
+  <div class="table-wrap">
+  <table aria-label="Submission history">
     <thead>
-      <tr><th>#</th><th>Challenge</th><th>Passport</th><th>Score</th><th>Outcome</th></tr>
+      <tr>
+        <th scope="col">#</th><th scope="col">Challenge</th><th scope="col">Passport</th>
+        <th scope="col">Score</th><th scope="col">Outcome</th>
+      </tr>
     </thead>
     <tbody id="historyList"></tbody>
   </table>
+  </div>
 
   <script src="/js/player.js"></script>
 </body>

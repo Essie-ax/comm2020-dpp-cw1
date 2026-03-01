@@ -1,41 +1,53 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GameKeeper - Challenge Management</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 16px; }
     h2 { color: #333; }
     h3 { margin-top: 24px; color: #555; }
-    input, select { padding: 6px 10px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 220px; }
-    button { padding: 8px 18px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+    input, select { padding: 6px 10px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 220px; min-height: 36px; }
+    input:focus-visible, select:focus-visible { outline: 2px solid #4a90d9; outline-offset: 1px; }
+    button { padding: 8px 18px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; min-height: 44px; }
+    button:focus-visible { outline: 2px solid #357abd; outline-offset: 2px; }
     .btn-primary { background: #4a90d9; }
     .btn-primary:hover { background: #357abd; }
     .btn-secondary { background: #888; }
-    .btn-small { padding: 4px 12px; font-size: 13px; background: #5cb85c; }
+    .btn-small { padding: 4px 12px; font-size: 13px; background: #5cb85c; min-height: 32px; }
     .btn-small:hover { background: #449d44; }
     .msg-ok { color: green; margin: 8px 0; }
     .msg-err { color: red; margin: 8px 0; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 400px; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
     th { background: #f5f5f5; }
     .detail-box { background: #f9f9f9; border: 1px solid #ddd; padding: 16px; margin-top: 8px; border-radius: 4px; }
     .detail-box p { margin: 4px 0; }
-    .form-row { margin: 8px 0; }
-    .form-row label { display: inline-block; width: 140px; font-size: 14px; }
+    .form-row { margin: 8px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .form-row label { font-size: 14px; width: 140px; flex-shrink: 0; }
+    .form-row input, .form-row select { flex: 1; min-width: 160px; }
     #info { color: #666; font-size: 13px; }
     a { color: #4a90d9; cursor: pointer; }
+    a:focus-visible { outline: 2px solid #4a90d9; outline-offset: 2px; border-radius: 2px; }
     hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+    @media (max-width: 480px) {
+      .form-row { flex-direction: column; align-items: flex-start; }
+      .form-row label { width: auto; }
+      .form-row input, .form-row select { width: 100%; }
+    }
   </style>
 </head>
 <body>
   <h2>GameKeeper Dashboard</h2>
   <p id="info"></p>
-  <span id="navBar">
+  <nav id="navBar" aria-label="Site navigation">
     <a href="/leaderboard.html">View Leaderboard</a> |
     <a href="/analytics.html">Analytics</a> |
     <a href="/player.html" id="navPlayer" style="display:none;">Player Dashboard</a>
     <a href="/login.html" id="logout">Logout</a>
-  </span>
+  </nav>
 
   <hr>
 
@@ -85,27 +97,29 @@
       <button class="btn-primary" id="createBtn">Create Challenge</button>
       <button class="btn-secondary" id="resetBtn">Reset</button>
     </div>
-    <div id="createMsg"></div>
+    <div id="createMsg" aria-live="polite"></div>
   </div>
 
   <hr>
 
   <!-- ===== Challenge List ===== -->
   <h3>Challenge List</h3>
-  <div id="listMsg"></div>
-  <table>
+  <div id="listMsg" aria-live="polite"></div>
+  <div class="table-wrap">
+  <table aria-label="Challenge list">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Title</th>
-        <th>Category</th>
-        <th>Start</th>
-        <th>End</th>
-        <th>Action</th>
+        <th scope="col">ID</th>
+        <th scope="col">Title</th>
+        <th scope="col">Category</th>
+        <th scope="col">Start</th>
+        <th scope="col">End</th>
+        <th scope="col">Action</th>
       </tr>
     </thead>
     <tbody id="challengeList"></tbody>
   </table>
+  </div>
 
   <hr>
 
