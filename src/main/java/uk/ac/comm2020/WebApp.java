@@ -8,6 +8,7 @@ import uk.ac.comm2020.api.ProductsHandler;
 import uk.ac.comm2020.api.TemplateByIdHandler;
 import uk.ac.comm2020.api.TemplatesHandler;
 import uk.ac.comm2020.config.EnvConfig;
+import uk.ac.comm2020.controller.AnalyticsController;
 import uk.ac.comm2020.controller.AuthController;
 import uk.ac.comm2020.controller.ChallengeController;
 import uk.ac.comm2020.controller.ComparisonController;
@@ -94,6 +95,9 @@ public class WebApp {
         ComparisonController comparisonController = new ComparisonController(comparisonService);
         PassportReadController passportReadController = new PassportReadController(passportRepo);
 
+        AnalyticsService analyticsService = new AnalyticsService(submissionDao, challengeDao);
+        AnalyticsController analyticsController = new AnalyticsController(analyticsService, sessionService);
+
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
         server.createContext("/", WebApp::handleStatic);
@@ -102,6 +106,7 @@ public class WebApp {
         server.createContext("/api/challenges", challengeController::handleChallenges);
         server.createContext("/api/leaderboard", leaderboardController::handleLeaderboard);
 
+        server.createContext("/api/analytics", analyticsController::handleAnalytics);
         server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
         server.createContext("/api/passports/compare", comparisonController::handleCompare);
 

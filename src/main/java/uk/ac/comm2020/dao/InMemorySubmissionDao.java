@@ -41,4 +41,9 @@ public class InMemorySubmissionDao implements SubmissionDao {
         result.sort((a, b) -> Integer.compare((int) b.get("score"), (int) a.get("score")));
         return result;
     }
+
+    @Override
+    public List<Map<String, Object>> getAllSubmissions() {
+        return new ArrayList<>(store.values());
+    }
 }

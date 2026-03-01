@@ -11,4 +11,6 @@ public interface SubmissionDao {
     Map<String, Object> getSubmissionById(long id);
 
     List<Map<String, Object>> getSubmissionsByChallenge(long challengeId);
+
+    List<Map<String, Object>> getAllSubmissions();
 }
