@@ -1,19 +1,24 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Leaderboard</title>
   <style>
     body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 0 16px; }
     h2 { color: #333; }
     h3 { margin-top: 24px; color: #555; }
-    input { padding: 6px 10px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 120px; }
-    button { padding: 8px 18px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; }
+    input { padding: 6px 10px; margin: 4px 0; border: 1px solid #ccc; border-radius: 4px; width: 120px; min-height: 36px; }
+    input:focus-visible { outline: 2px solid #4a90d9; outline-offset: 1px; }
+    button { padding: 8px 18px; margin: 4px 4px 4px 0; border: none; border-radius: 4px; cursor: pointer; color: #fff; min-height: 44px; }
+    button:focus-visible { outline: 2px solid #357abd; outline-offset: 2px; }
     .btn-primary { background: #4a90d9; }
     .btn-primary:hover { background: #357abd; }
     .msg-ok { color: green; margin: 8px 0; }
     .msg-err { color: red; margin: 8px 0; }
     .msg-info { color: #999; margin: 8px 0; font-size: 13px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; min-width: 400px; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
     th { background: #f5f5f5; }
     .rank-1 { font-weight: bold; color: #d4a017; }
@@ -24,18 +29,19 @@
     .nav-links { margin-bottom: 12px; font-size: 14px; }
     .nav-links a { color: #4a90d9; margin-right: 16px; text-decoration: none; }
     .nav-links a:hover { text-decoration: underline; }
-    .search-row { margin: 12px 0; display: flex; align-items: center; gap: 8px; }
+    .nav-links a:focus-visible { outline: 2px solid #4a90d9; outline-offset: 2px; border-radius: 2px; }
+    .search-row { margin: 12px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .search-row label { font-size: 14px; }
     #info { color: #666; font-size: 13px; }
   </style>
 </head>
 <body>
   <h2>Leaderboard</h2>
-  <div class="nav-links" id="navLinks">
+  <nav class="nav-links" id="navLinks" aria-label="Site navigation">
     <a href="/player.html" id="navPlayer" style="display:none;">Player Dashboard</a>
     <a href="/gamekeeper.html" id="navGk" style="display:none;">Challenge Management</a>
     <a href="/login.html" id="logoutLink">Logout</a>
-  </div>
+  </nav>
   <p id="info"></p>
 
   <!-- Search area -->
@@ -44,21 +50,23 @@
     <input id="challengeIdInput" type="number" min="1" placeholder="e.g. 1" />
     <button class="btn-primary" id="loadBtn">Load Leaderboard</button>
   </div>
-  <div id="statusMsg"></div>
+  <div id="statusMsg" aria-live="polite"></div>
 
   <!-- Result table -->
-  <table id="leaderboardTable" style="display:none;">
-    <thead>
-      <tr>
-        <th>Rank</th>
-        <th>Player ID</th>
-        <th>Score</th>
-        <th>Outcome</th>
-        <th>Submitted At</th>
-      </tr>
-    </thead>
-    <tbody id="leaderboardBody"></tbody>
-  </table>
+  <div class="table-wrap">
+    <table id="leaderboardTable" style="display:none;" aria-label="Leaderboard results">
+      <thead>
+        <tr>
+          <th scope="col">Rank</th>
+          <th scope="col">Player ID</th>
+          <th scope="col">Score</th>
+          <th scope="col">Outcome</th>
+          <th scope="col">Submitted At</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboardBody"></tbody>
+    </table>
+  </div>
 
   <!-- Empty state -->
   <p id="emptyState" style="display:none;" class="msg-info">No leaderboard data for this challenge.</p>
