@@ -20,7 +20,6 @@ public class ComparisonServiceTest {
         service = new ComparisonService(new InMemoryPassportDao());
     }
 
-    // --- Test 1: Compare two valid passports returns result map ---
     @Test
     void compareTwoPassportsReturnsResult() throws SQLException {
         Map<String, Object> result = service.compare(1, 2);
@@ -30,21 +29,18 @@ public class ComparisonServiceTest {
         assertNotNull(result.get("scoreDiff"));
     }
 
-    // --- Test 2: Passport not found throws exception ---
     @Test
     void compareWithMissingPassportThrowsException() {
         assertThrows(IllegalArgumentException.class, () -> service.compare(1, 9999));
         assertThrows(IllegalArgumentException.class, () -> service.compare(9999, 1));
     }
 
-    // --- Test 3: fieldDiffs contains expected keys from both passports ---
     @Test
     void fieldDiffsContainKeysFromBothPassports() throws SQLException {
         Map<String, Object> result = service.compare(1, 2);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> diffs = (List<Map<String, Object>>) result.get("fieldDiffs");
         assertFalse(diffs.isEmpty());
-        // Every row must have key, value1, value2, match
         for (Map<String, Object> row : diffs) {
             assertTrue(row.containsKey("key"));
             assertTrue(row.containsKey("value1"));
@@ -53,7 +49,6 @@ public class ComparisonServiceTest {
         }
     }
 
-    // --- Test 4: Mismatches appear before matches in fieldDiffs ---
     @Test
     void fieldDiffsMismatchesComesBeforeMatches() throws SQLException {
         Map<String, Object> result = service.compare(1, 2);
@@ -66,13 +61,12 @@ public class ComparisonServiceTest {
             if (match) {
                 seenMatch = true;
             } else {
-                // Once we see a match, no more mismatches should appear
+                // Once we see a match row, any subsequent mismatch means the sort is broken.
                 assertFalse(seenMatch, "A mismatch appeared after a match - order is wrong");
             }
         }
     }
 
-    // --- Test 5: scoreDiff contains completeness and confidence ---
     @Test
     void scoreDiffHasCompletenessAndConfidence() throws SQLException {
         Map<String, Object> result = service.compare(1, 2);
@@ -82,7 +76,6 @@ public class ComparisonServiceTest {
         assertTrue(scoreDiff.containsKey("confidence"));
     }
 
-    // --- Test 6: Comparing same passport to itself shows all fields matching ---
     @Test
     void compareSamePassportShowsAllFieldsMatching() throws SQLException {
         Map<String, Object> result = service.compare(1, 1);

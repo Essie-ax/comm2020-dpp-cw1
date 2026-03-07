@@ -22,7 +22,6 @@ public class AnalyticsServiceTest {
         service = new AnalyticsService(submissionDao, new InMemoryChallengeDao());
     }
 
-    // --- Test 1: getAnalytics returns all required keys ---
     @Test
     void getAnalyticsReturnsRequiredKeys() {
         Map<String, Object> result = service.getAnalytics();
@@ -34,7 +33,6 @@ public class AnalyticsServiceTest {
         assertTrue(result.containsKey("challenges"));
     }
 
-    // --- Test 2: No submissions -> avgScore and passRate are 0 ---
     @Test
     void noSubmissionsGivesZeroAvgAndPassRate() {
         Map<String, Object> result = service.getAnalytics();
@@ -43,7 +41,6 @@ public class AnalyticsServiceTest {
         assertEquals(0, result.get("totalSubmissions"));
     }
 
-    // --- Test 3: avgScore calculated correctly ---
     @Test
     void avgScoreCalculatedCorrectly() {
         submissionDao.createSubmission(1, 1, 1, 80, "PASS");
@@ -54,7 +51,6 @@ public class AnalyticsServiceTest {
         assertEquals(70.0, result.get("avgScore"));
     }
 
-    // --- Test 4: passRate calculated correctly ---
     @Test
     void passRateCalculatedCorrectly() {
         submissionDao.createSubmission(1, 1, 1, 90, "PASS");
@@ -67,7 +63,6 @@ public class AnalyticsServiceTest {
         assertEquals(50.0, result.get("passRate"));
     }
 
-    // --- Test 5: scoreDistribution has 4 buckets ---
     @Test
     void scoreDistributionHasFourBuckets() {
         submissionDao.createSubmission(1, 1, 1, 10, "FAIL");  // 0-24
@@ -80,19 +75,17 @@ public class AnalyticsServiceTest {
         List<Map<String, Object>> dist = (List<Map<String, Object>>) result.get("scoreDistribution");
 
         assertEquals(4, dist.size());
-        // Each bucket should have exactly 1 submission
         for (Map<String, Object> bucket : dist) {
             assertEquals(1, bucket.get("count"));
         }
     }
 
-    // --- Test 6: challenges breakdown lists at least one challenge ---
     @Test
     void challengeBreakdownListsSeededChallenge() {
         Map<String, Object> result = service.getAnalytics();
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> challenges = (List<Map<String, Object>>) result.get("challenges");
-        // InMemoryChallengeDao seeds one challenge
+        // InMemoryChallengeDao seeds one challenge, so there should be at least one row.
         assertTrue(challenges.size() >= 1);
         Map<String, Object> first = challenges.get(0);
         assertTrue(first.containsKey("challengeId"));
