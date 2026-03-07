@@ -1,16 +1,101 @@
 <!doctype html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login – DPP System</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f4f7fb;
+      font-family: Arial, sans-serif;
+      color: #1f2937;
+      padding: 16px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      border-radius: 14px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 12px 32px rgba(148, 163, 184, 0.2);
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin: 0 0 6px;
+      color: #1e293b;
+    }
+    .hint {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin: 0 0 20px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+      color: #374151;
+    }
+    input {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      font-size: 1rem;
+      margin-bottom: 14px;
+      background: #fff;
+      color: #1f2937;
+    }
+    input:focus-visible {
+      outline: 2px solid #6366f1;
+      outline-offset: 1px;
+      border-color: #6366f1;
+    }
+    button {
+      width: 100%;
+      padding: 11px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 44px;
+    }
+    button:hover { background: #4f46e5; }
+    button:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+    #err {
+      min-height: 1.2em;
+      color: #b91c1c;
+      font-size: 0.88rem;
+      margin-top: 10px;
+    }
+  </style>
+</head>
 <body>
-  <h2>Login</h2>
-  <div>
-    <input id="username" placeholder="username" />
-  </div>
-  <div style="margin-top:10px">
-    <input id="password" type="password" placeholder="password" />
-  </div>
-  <button id="btn" style="margin-top:10px">Log in</button>
-  <div id="err" style="color:red;margin-top:10px;"></div>
-  <p style="margin-top:16px;color:#666;font-size:12px">Demo: player1 / gamekeeper1, password: password</p>
+  <main class="card">
+    <h1>DPP System</h1>
+    <p class="hint">Demo accounts: player1 / gamekeeper1 &mdash; password: password</p>
+
+    <label for="username">Username</label>
+    <input id="username" type="text" placeholder="Enter username"
+           autocomplete="username" aria-required="true">
+
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="Enter password"
+           autocomplete="current-password" aria-required="true">
+
+    <button id="btn" type="submit">Log in</button>
+    <div id="err" role="alert" aria-live="polite"></div>
+  </main>
 
   <script src="/js/auth.js"></script>
 </body>
