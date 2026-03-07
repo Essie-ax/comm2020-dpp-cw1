@@ -13,6 +13,7 @@ import uk.ac.comm2020.controller.AuthController;
 import uk.ac.comm2020.controller.ChallengeController;
 import uk.ac.comm2020.controller.ComparisonController;
 import uk.ac.comm2020.controller.LeaderboardController;
+import uk.ac.comm2020.controller.PassportAuthorController;
 import uk.ac.comm2020.controller.PassportReadController;
 import uk.ac.comm2020.controller.PassportValidationController;
 import uk.ac.comm2020.dao.*;
@@ -98,6 +99,8 @@ public class WebApp {
         AnalyticsService analyticsService = new AnalyticsService(submissionDao, challengeDao);
         AnalyticsController analyticsController = new AnalyticsController(analyticsService, sessionService);
 
+        PassportAuthorController passportAuthorController = new PassportAuthorController(passportRepo, sessionService);
+
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
         server.createContext("/", WebApp::handleStatic);
@@ -109,6 +112,7 @@ public class WebApp {
         server.createContext("/api/analytics", analyticsController::handleAnalytics);
         server.createContext("/api/passports/validate", passportValidationController::handleValidatePassport);
         server.createContext("/api/passports/compare", comparisonController::handleCompare);
+        server.createContext("/api/passports/author", passportAuthorController::handleAuthor);
 
         // Without DB the PassportsHandler isn't registered, so we need our own read endpoint.
         if (!useDb) {
