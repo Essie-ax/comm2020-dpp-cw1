@@ -1,3 +1,5 @@
+package uk.ac.comm2020;
+
 import uk.ac.comm2020.dao.MySqlUserDao;
 import uk.ac.comm2020.model.User;
 
