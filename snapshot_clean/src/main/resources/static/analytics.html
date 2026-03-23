@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Analytics Dashboard</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      h1 { font-size: 1.4rem; margin: 0 0 4px; }
+      .nav { margin-bottom: 14px; font-size: 0.9rem; }
+      .nav a { color: #6366f1; text-decoration: none; margin-right: 14px; }
+      .nav a:hover { text-decoration: underline; }
+      .card {
+        background: #ffffff;
+        border: 1px solid rgba(99, 102, 241, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 12px 32px rgba(148, 163, 184, 0.2);
+      }
+      .section-title {
+        margin: 0 0 12px;
+        font-weight: 700;
+        color: #475569;
+        font-size: 0.95rem;
+      }
+      /* Summary cards row */
+      .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .stat-card {
+        background: #fff;
+        border: 1px solid rgba(99, 102, 241, 0.12);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        box-shadow: 0 12px 32px rgba(148, 163, 184, 0.2);
+      }
+      .stat-label { font-size: 0.78rem; color: #64748b; margin-bottom: 8px; }
+      .stat-val { font-size: 2rem; font-weight: 700; color: #6366f1; }
+      .stat-unit { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; }
+      /* Score distribution bars */
+      .dist-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        gap: 10px;
+      }
+      .dist-label { width: 60px; font-size: 0.85rem; color: #475569; flex-shrink: 0; }
+      .dist-bar-wrap { flex: 1; background: #f1f5f9; border-radius: 6px; height: 22px; overflow: hidden; }
+      .dist-bar { height: 100%; background: #7da4ff; border-radius: 6px; transition: width 0.4s; }
+      .dist-count { width: 30px; font-size: 0.85rem; color: #64748b; text-align: right; flex-shrink: 0; }
+      /* Challenge table */
+      .data-table { width: 100%; border-collapse: collapse; }
+      .data-table th {
+        background: #f1f5f9;
+        font-weight: 600;
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 0.88rem;
+      }
+      .data-table td {
+        padding: 9px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 0.88rem;
+      }
+      .data-table tr:hover td { background: #f8fafc; }
+      .badge-pass { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #dcfce7; color: #166534; font-size: 0.78rem; font-weight: 600; }
+      .badge-low  { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 0.78rem; font-weight: 600; }
+      .empty-msg { text-align: center; color: #94a3b8; padding: 24px; font-size: 0.9rem; }
+      @media (max-width: 640px) {
+        .summary-row { grid-template-columns: repeat(2, 1fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Analytics Dashboard</h1>
+      <div class="nav">
+        <a href="/gamekeeper.html">GameKeeper</a>
+        <a href="/player.html">Player</a>
+        <a href="/leaderboard.html">Leaderboard</a>
+        <a href="/login.html" id="logoutLink">Logout</a>
+      </div>
+
+      <!-- Summary stat cards -->
+      <div class="summary-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Challenges</div>
+          <div class="stat-val" id="statChallenges">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Submissions</div>
+          <div class="stat-val" id="statSubmissions">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Score</div>
+          <div class="stat-val" id="statAvg">—</div>
+          <div class="stat-unit">out of 100</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pass Rate</div>
+          <div class="stat-val" id="statPass">—</div>
+          <div class="stat-unit">% of submissions</div>
+        </div>
+      </div>
+
+      <!-- Score distribution -->
+      <section class="card">
+        <div class="section-title">Score Distribution</div>
+        <div id="distContainer">
+          <div class="empty-msg">Loading…</div>
+        </div>
+      </section>
+
+      <!-- Per-challenge breakdown -->
+      <section class="card">
+        <div class="section-title">Per-Challenge Breakdown</div>
+        <div id="challengeTableWrap">
+          <div class="empty-msg">Loading…</div>
+        </div>
+      </section>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          window.location.href = "/login.html";
+          return;
+        }
+
+        document.getElementById("logoutLink").addEventListener("click", (e) => {
+          e.preventDefault();
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          window.location.href = "/login.html";
+        });
+
+        try {
+          const res = await fetch("/api/analytics", {
+            headers: { "Authorization": "Bearer " + token }
+          });
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            showError("Failed to load analytics: " + (json?.error?.message || res.status));
+            return;
+          }
+          render(json.data);
+        } catch (err) {
+          showError("Request failed. Check the server is running.");
+        }
+
+        function render(data) {
+          document.getElementById("statChallenges").textContent = data.totalChallenges;
+          document.getElementById("statSubmissions").textContent = data.totalSubmissions;
+          document.getElementById("statAvg").textContent = data.totalSubmissions > 0 ? data.avgScore : "—";
+          document.getElementById("statPass").textContent = data.totalSubmissions > 0 ? data.passRate : "—";
+
+          renderDistribution(data.scoreDistribution, data.totalSubmissions);
+          renderChallengeTable(data.challenges);
+        }
+
+        function renderDistribution(dist, total) {
+          const wrap = document.getElementById("distContainer");
+          if (!total) {
+            wrap.innerHTML = '<div class="empty-msg">No submissions yet.</div>';
+            return;
+          }
+          // Find max count to scale bars
+          const max = dist.reduce((m, d) => Math.max(m, d.count), 1);
+          wrap.innerHTML = "";
+          dist.forEach(d => {
+            const pct = Math.round(d.count / max * 100);
+            const row = document.createElement("div");
+            row.className = "dist-row";
+            row.innerHTML = `
+              <div class="dist-label">${d.range}</div>
+              <div class="dist-bar-wrap">
+                <div class="dist-bar" style="width:${pct}%"></div>
+              </div>
+              <div class="dist-count">${d.count}</div>
+            `;
+            wrap.appendChild(row);
+          });
+        }
+
+        function renderChallengeTable(challenges) {
+          const wrap = document.getElementById("challengeTableWrap");
+          if (!challenges || challenges.length === 0) {
+            wrap.innerHTML = '<div class="empty-msg">No challenges found.</div>';
+            return;
+          }
+          const table = document.createElement("table");
+          table.className = "data-table";
+          table.innerHTML = `
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Submissions</th>
+                <th>Avg Score</th>
+                <th>Pass Rate</th>
+              </tr>
+            </thead>
+          `;
+          const tbody = document.createElement("tbody");
+          challenges.forEach(c => {
+            const hasSubs = c.submissionCount > 0;
+            const passClass = c.passRate >= 50 ? "badge-pass" : "badge-low";
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${c.challengeId}</td>
+              <td>${c.title}</td>
+              <td>${c.category}</td>
+              <td>${c.submissionCount}</td>
+              <td>${hasSubs ? c.avgScore : "—"}</td>
+              <td>${hasSubs ? `<span class="${passClass}">${c.passRate}%</span>` : "—"}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          wrap.innerHTML = "";
+          wrap.appendChild(table);
+        }
+
+        function showError(msg) {
+          document.querySelector(".container").innerHTML +=
+            `<div style="background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;">${msg}</div>`;
+        }
+      });
+    </script>
+  </body>
+</html>

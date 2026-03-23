@@ -129,7 +129,7 @@ public class WebApp {
 
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
-        System.out.println("Server running on port " + port + " -> /login.html");
+        System.out.println("Server running: http://localhost:" + port + "/login.html");
     }
 
     private static void handleStatic(HttpExchange ex) throws IOException {

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Passport Authoring</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f7fb;
+        color: #1f2937;
+      }
+      .container {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      h1 { font-size: 1.4rem; margin: 0 0 4px; }
+      nav { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 4px; }
+      nav a { color: #3498db; margin-right: 14px; text-decoration: none; }
+      nav a:hover { text-decoration: underline; }
+      nav a:focus-visible { outline: 2px solid #3498db; outline-offset: 2px; border-radius: 2px; }
+      .card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      label { display: block; font-weight: 600; margin: 10px 0 4px; }
+      input, select {
+        width: 100%;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        box-sizing: border-box;
+        font-size: 0.95rem;
+      }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; }
+      .row > div { flex: 1; min-width: 200px; }
+      button {
+        margin-top: 12px;
+        padding: 10px 20px;
+        background: #3498db;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      button:hover { background: #217dbb; }
+      button:focus-visible { outline: 2px solid #3498db; outline-offset: 2px; }
+      .msg { margin-top: 10px; padding: 8px; border-radius: 4px; display: none; }
+      .msg.ok { display: block; background: #d1fae5; color: #065f46; }
+      .msg.err { display: block; background: #fee2e2; color: #991b1b; }
+      .result-box { margin-top: 12px; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Passport Authoring</h1>
+      <p style="color:#64748b;margin:0 0 8px;">Create a new Digital Product Passport</p>
+
+      <nav aria-label="Site navigation">
+        <a href="/player.html">Player Dashboard</a>
+        <a href="/leaderboard.html">Leaderboard</a>
+        <a href="/compare.html">Compare</a>
+        <a href="/analytics.html">Analytics</a>
+        <a href="/login.html" id="logoutLink">Logout</a>
+      </nav>
+
+      <section class="card">
+        <div class="row">
+          <div>
+            <label for="category">Category</label>
+            <select id="category">
+              <option value="Battery">Battery</option>
+              <option value="Textiles">Textiles</option>
+              <option value="Cosmetics">Cosmetics</option>
+              <option value="Electronics">Electronics</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="fname">Name *</label>
+            <input id="fname" type="text" placeholder="e.g. Li-Ion Battery 3000mAh">
+          </div>
+          <div>
+            <label for="fbrand">Brand *</label>
+            <input id="fbrand" type="text" placeholder="e.g. GreenCell">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="forigin">Origin *</label>
+            <input id="forigin" type="text" placeholder="e.g. Germany">
+          </div>
+          <div>
+            <label for="fweight">Weight (kg)</label>
+            <input id="fweight" type="number" step="0.01" placeholder="e.g. 0.35">
+          </div>
+        </div>
+
+        <div id="batteryRow" class="row">
+          <div>
+            <label for="fchemistry">Chemistry (Battery only)</label>
+            <input id="fchemistry" type="text" placeholder="e.g. Lithium-Ion">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="frecyclable">Recyclable</label>
+            <select id="frecyclable">
+              <option value="">-- select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+          <div>
+            <label for="fpct">Recyclable %</label>
+            <input id="fpct" type="number" min="0" max="100" placeholder="e.g. 78">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="feol">End of Life</label>
+            <input id="feol" type="text" placeholder="e.g. Return to certified e-waste facility">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="fmfg">Manufacture Date</label>
+            <input id="fmfg" type="date">
+          </div>
+          <div>
+            <label for="fexp">Expiry Date</label>
+            <input id="fexp" type="date">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="forganic">Organic</label>
+            <select id="forganic">
+              <option value="">-- select --</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="createBtn" type="button">Create Passport</button>
+
+        <div class="msg" id="msg"></div>
+        <div class="result-box" id="resultBox"></div>
+      </section>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+      var token = localStorage.getItem("token");
+      if (!token) {
+        window.location.href = "/login.html";
+      }
+
+      var categoryEl = document.getElementById("category");
+      var batteryRow = document.getElementById("batteryRow");
+
+      categoryEl.addEventListener("change", function() {
+        batteryRow.style.display = categoryEl.value === "Battery" ? "flex" : "none";
+      });
+
+      document.getElementById("createBtn").addEventListener("click", function() {
+        var msgEl = document.getElementById("msg");
+        var resultEl = document.getElementById("resultBox");
+        msgEl.className = "msg";
+        resultEl.style.display = "none";
+
+        var name = document.getElementById("fname").value.trim();
+        var brand = document.getElementById("fbrand").value.trim();
+        var origin = document.getElementById("forigin").value.trim();
+
+        if (!name || !brand || !origin) {
+          msgEl.className = "msg err";
+          msgEl.textContent = "Name, Brand and Origin are required.";
+          return;
+        }
+
+        var weightInput = document.getElementById("fweight").value.trim();
+        if (weightInput) {
+          var weightNum = parseFloat(weightInput);
+          if (isNaN(weightNum) || weightNum <= 0) {
+            msgEl.className = "msg err";
+            msgEl.textContent = "Weight must be a positive number (greater than 0).";
+            return;
+          }
+          if (!/^\d+(\.\d+)?$/.test(weightInput) || (weightInput.length > 1 && weightInput[0] === "0" && weightInput[1] !== ".")) {
+            msgEl.className = "msg err";
+            msgEl.textContent = "Weight format is invalid (no leading zeros, e.g. 0.35 or 2.5).";
+            return;
+          }
+        }
+
+        var mfg = document.getElementById("fmfg").value;
+        if (mfg) {
+          var today = new Date().toISOString().split("T")[0];
+          if (mfg > today) {
+            msgEl.className = "msg err";
+            msgEl.textContent = "Manufacture Date cannot be in the future.";
+            return;
+          }
+        }
+
+        var exp = document.getElementById("fexp").value;
+        if (mfg && exp && exp <= mfg) {
+          msgEl.className = "msg err";
+          msgEl.textContent = "Expiry Date must be after Manufacture Date.";
+          return;
+        }
+
+        var fields = {};
+        fields.name = name;
+        fields.brand = brand;
+        fields.category = categoryEl.value;
+        fields.origin = origin;
+
+        if (weightInput) fields.weight = parseFloat(weightInput);
+
+        var chem = document.getElementById("fchemistry").value.trim();
+        if (chem) fields.chemistry = chem;
+
+        var rec = document.getElementById("frecyclable").value;
+        if (rec) fields.recyclable = (rec === "true");
+
+        var pct = document.getElementById("fpct").value;
+        if (pct) fields.recyclable_percentage = parseInt(pct, 10);
+
+        var eol = document.getElementById("feol").value.trim();
+        if (eol) fields.end_of_life = eol;
+
+        if (mfg) fields.manufacture_date = mfg;
+        if (exp) fields.expiry_date = exp;
+
+        var org = document.getElementById("forganic").value;
+        if (org) fields.organic = (org === "true");
+
+        fetch("/api/passports/author", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ fields: fields })
+        })
+        .then(function(res) {
+          if (res.status === 401) {
+            localStorage.clear();
+            window.location.href = "/login.html";
+            return null;
+          }
+          return res.json();
+        })
+        .then(function(json) {
+          if (!json) return;
+          if (!json.success) {
+            msgEl.className = "msg err";
+            msgEl.textContent = json.error ? json.error.message : "Failed to create passport";
+            return;
+          }
+          msgEl.className = "msg ok";
+          msgEl.textContent = "Passport created successfully!";
+          resultEl.style.display = "block";
+          resultEl.innerHTML = "<strong>Passport ID: " + json.data.passportId + "</strong>"
+            + "<br>Use this ID to submit to a challenge on the "
+            + '<a href="/player.html">Player Dashboard</a>.';
+        })
+        .catch(function(err) {
+          msgEl.className = "msg err";
+          msgEl.textContent = "Network error: " + err.message;
+        });
+      });
+    </script>
+  </body>
+</html>
