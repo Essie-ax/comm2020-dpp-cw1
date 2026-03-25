@@ -9,6 +9,11 @@ A web application for creating, validating, scoring, and comparing Digital Produ
 - 53 automated JUnit 5 tests, 8+ manual end-to-end scenarios.
 - Seeded dataset: 150 products, 200 passports, 300 evidence items, 6 challenges, 30 submissions.
 
+## Live Demo
+
+- **Deployed URL**: https://comm2020-dpp-cw2.onrender.com
+- **Login page**: https://comm2020-dpp-cw2.onrender.com/login.html
+
 ## Features
 
 | Feature | Description |
